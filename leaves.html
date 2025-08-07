@@ -39,14 +39,25 @@
     </div>
 
     <div class="container">
-        <table id="leavesTable" class="leaves-table">
-            <thead>
-                <tr id="leavesHeaderRow">
-                </tr>
-            </thead>
-            <tbody id="leavesTableBody">
-            </tbody>
-        </table>
+        <div class="view-tabs">
+            <button id="monthlyViewBtn" class="tab-btn active">Widok Miesięczny</button>
+            <button id="summaryViewBtn" class="tab-btn">Podsumowanie Roczne</button>
+        </div>
+
+        <div id="monthlyViewContainer">
+            <table id="leavesTable" class="leaves-table">
+                <thead>
+                    <tr id="leavesHeaderRow">
+                    </tr>
+                </thead>
+                <tbody id="leavesTableBody">
+                </tbody>
+            </table>
+        </div>
+
+        <div id="summaryViewContainer" style="display: none;">
+            <!-- Tabela podsumowania zostanie wstrzyknięta tutaj przez JS -->
+        </div>
     </div>
 
     <div id="contextMenu" class="context-menu">
@@ -96,7 +107,9 @@
     
     <script src="scripts/firebase-config.js"></script>
     <script src="scripts/common.js"></script>
+    <script src="scripts/employee-manager.js"></script>
     <script src="scripts/shared.js"></script>
     <script src="scripts/leaves.js"></script>
+    <script src="scripts/leaves-summary.js"></script>
 </body>
 </html>

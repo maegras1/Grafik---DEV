@@ -22,7 +22,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // --- MODEL STANU APLIKACJI ---
     const appState = {
-        employeeHeaders: {},
         scheduleCells: {}
     };
 
@@ -256,7 +255,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const addBtn = document.getElementById('addAnywayBtn');
         const cancelBtn = document.getElementById('cancelBtn');
 
-        const employeeName = appState.employeeHeaders[duplicateInfo.employeeIndex] || `Pracownik ${parseInt(duplicateInfo.employeeIndex) + 1}`;
+        const employeeName = EmployeeManager.getNameById(duplicateInfo.employeeIndex);
         modalText.innerHTML = `Znaleziono identyczny wpis dla "<b>${employeeName}</b>" o godzinie ${duplicateInfo.time}. Co chcesz zrobić?`;
 
         modal.style.display = 'block';
@@ -285,11 +284,14 @@ document.addEventListener('DOMContentLoaded', () => {
     };
 
     const renderTable = () => {
+        const employees = EmployeeManager.getAll();
         // Renderowanie nagłówków
         tableHeaderRow.innerHTML = '<th>Godz.</th>';
-        for (let i = 0; i < NUMBER_OF_EMPLOYEES; i++) {
+        const employeeIndices = Object.keys(employees).sort((a, b) => parseInt(a) - parseInt(b));
+
+        for (const i of employeeIndices) {
             const th = document.createElement('th');
-            const headerText = appState.employeeHeaders[i] || `Pracownik ${i + 1}`;
+            const headerText = employees[i]?.name || `Pracownik ${parseInt(i) + 1}`;
             th.textContent = capitalizeFirstLetter(headerText);
             th.setAttribute('data-employee-index', i);
             th.setAttribute('tabindex', '0');
@@ -304,8 +306,10 @@ document.addEventListener('DOMContentLoaded', () => {
                 const tr = tbody.insertRow();
                 const timeString = `${hour}:${minute.toString().padStart(2, '0')}`;
                 tr.insertCell().textContent = timeString;
+                const employees = EmployeeManager.getAll();
+                const employeeIndices = Object.keys(employees).sort((a, b) => parseInt(a) - parseInt(b));
 
-                for (let i = 0; i < NUMBER_OF_EMPLOYEES; i++) {
+                for (const i of employeeIndices) {
                     const cell = tr.insertCell();
                     const cellData = appState.scheduleCells[timeString]?.[i] || {};
                     applyCellDataToDom(cell, cellData);
@@ -376,24 +380,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
             if (doc.exists) {
                 const savedData = doc.data();
-                appState.employeeHeaders = savedData.employeeHeaders || {};
                 appState.scheduleCells = savedData.scheduleCells || {};
-
-                // Sprawdzenie i aktualizacja cache
-                const cachedHeaders = sessionStorage.getItem('employeeHeaders');
-                if (cachedHeaders) {
-                    appState.employeeHeaders = JSON.parse(cachedHeaders);
-                } else {
-                    sessionStorage.setItem('employeeHeaders', JSON.stringify(appState.employeeHeaders));
-                    const employeeNames = Object.values(appState.employeeHeaders);
-                    sessionStorage.setItem('employeeNames', JSON.stringify(employeeNames));
-                }
             } else {
                 console.log("No schedule found, creating a new one.");
-                // Zainicjuj pusty stan, jeśli nie ma danych w Firestore
-                for (let i = 0; i < NUMBER_OF_EMPLOYEES; i++) {
-                    appState.employeeHeaders[i] = `Pracownik ${i + 1}`;
-                }
             }
         } catch (error) {
             console.error('Error loading data from Firestore:', error);
@@ -445,7 +434,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     const applyTableState = (state) => {
         if (!state) return;
-        appState.employeeHeaders = state.employeeHeaders;
+        // employeeHeaders are now managed by EmployeeManager
         appState.scheduleCells = state.scheduleCells;
         renderTable();
         saveSchedule();
@@ -748,9 +737,17 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // --- INICJALIZACJA ---
     const init = async () => {
-        await loadSchedule(); // Ładuje dane i renderuje tabelę
-        undoManager.initialize(getCurrentTableState());
-        hideLoadingOverlay(loadingOverlay);
+        showLoading(true);
+        try {
+            await EmployeeManager.load();
+            await loadSchedule(); // Ładuje dane i renderuje tabelę
+            undoManager.initialize(getCurrentTableState());
+        } catch (error) {
+            console.error("Błąd inicjalizacji strony harmonogramu:", error);
+            window.showToast("Nie udało się załadować danych.", 5000);
+        } finally {
+            hideLoadingOverlay(loadingOverlay);
+        }
     };
 
     init();

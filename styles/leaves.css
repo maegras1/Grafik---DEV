@@ -219,8 +219,8 @@
     border-radius: 4px;
     font-size: 0.85em;
     white-space: normal;
-    text-align: left;
-    color: #fff;
+    text-align: center;
+    color: #000000;
 }
 
 .leave-block .arrow {

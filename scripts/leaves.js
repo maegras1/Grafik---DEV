@@ -15,6 +15,12 @@ document.addEventListener('DOMContentLoaded', () => {
     const contextClearCell = document.getElementById('contextClearCell');
     const contextOpenCalendar = document.getElementById('contextOpenCalendar');
 
+    // Selektory dla widoków
+    const monthlyViewBtn = document.getElementById('monthlyViewBtn');
+    const summaryViewBtn = document.getElementById('summaryViewBtn');
+    const monthlyViewContainer = document.getElementById('monthlyViewContainer');
+    const summaryViewContainer = document.getElementById('summaryViewContainer');
+
     // Nowe selektory dla modala z dwoma kalendarzami
     const leftMonthAndYear = document.getElementById('leftMonthAndYear');
     const rightMonthAndYear = document.getElementById('rightMonthAndYear');
@@ -27,7 +33,6 @@ document.addEventListener('DOMContentLoaded', () => {
     let currentYear = new Date().getUTCFullYear();
     let leftCalendarDate = new Date(Date.UTC(currentYear, new Date().getUTCMonth(), 1));
     
-    // Zmienne do zarządzania stanem wyboru w kalendarzu
     let selectionStartDate = null;
     let hoverEndDate = null;
     let singleSelectedDays = new Set();
@@ -47,31 +52,112 @@ document.addEventListener('DOMContentLoaded', () => {
     // --- GŁÓWNA LOGIKA APLIKACJI ---
 
     const initializePage = async () => {
-        generateTableHeaders();
-        const employeeNames = await getEmployeeNames();
-        generateTableRows(employeeNames);
-        await loadAllLeavesData();
-        hideLoadingOverlay(loadingOverlay);
+        showLoading(true);
+        try {
+            await EmployeeManager.load();
+            setupEventListeners();
+            // Domyślnie pokaż widok miesięczny
+            showMonthlyView();
+        } catch (error) {
+            console.error("Błąd inicjalizacji strony urlopów:", error);
+            window.showToast("Nie udało się załadować danych.", 5000);
+        } finally {
+            hideLoadingOverlay(loadingOverlay);
+        }
     };
 
-    const getEmployeeNames = async () => {
-        const cachedNames = sessionStorage.getItem('employeeNames');
-        if (cachedNames) return JSON.parse(cachedNames);
-        try {
-            const docRef = db.collection("schedules").doc("mainSchedule");
-            const doc = await docRef.get();
-            if (doc.exists) {
-                const employeeNames = Object.values(doc.data().employeeHeaders || {});
-                if (employeeNames.length > 0) {
-                    sessionStorage.setItem('employeeNames', JSON.stringify(employeeNames));
-                    return employeeNames;
-                }
+    const setupEventListeners = () => {
+        monthlyViewBtn.addEventListener('click', showMonthlyView);
+        summaryViewBtn.addEventListener('click', showSummaryView);
+        
+        leavesTableBody.addEventListener('click', (event) => {
+            const targetCell = event.target.closest('.day-cell');
+            if (targetCell) openModal(targetCell);
+        });
+
+        leavesTableBody.addEventListener('contextmenu', (event) => {
+            event.preventDefault();
+            const targetCell = event.target.closest('.day-cell');
+            if (targetCell) {
+                activeContextMenuCell = targetCell;
+                contextMenu.style.top = `${event.pageY}px`;
+                contextMenu.style.left = `${event.pageX}px`;
+                contextMenu.classList.add('visible');
             }
-            return [];
-        } catch (error) {
-            console.error('Nie udało się pobrać nazwisk pracowników:', error);
-            return [];
-        }
+        });
+
+        document.addEventListener('click', (e) => {
+            if (!contextMenu.contains(e.target)) {
+                contextMenu.classList.remove('visible');
+                activeContextMenuCell = null;
+            }
+        });
+
+        contextClearCell.addEventListener('click', () => {
+            clearCellLeaves(activeContextMenuCell);
+            contextMenu.classList.remove('visible');
+        });
+
+        contextOpenCalendar.addEventListener('click', () => {
+            openModal(activeContextMenuCell);
+            contextMenu.classList.remove('visible');
+        });
+        prevMonthBtn.addEventListener('click', () => {
+            leftCalendarDate.setUTCMonth(leftCalendarDate.getUTCMonth() - 1);
+            generateCalendars();
+        });
+        nextMonthBtn.addEventListener('click', () => {
+            leftCalendarDate.setUTCMonth(leftCalendarDate.getUTCMonth() + 1);
+            generateCalendars();
+        });
+        [leftCalendarGrid, rightCalendarGrid].forEach(grid => {
+            grid.addEventListener('click', handleDayClick);
+            grid.addEventListener('mouseover', handleDayMouseOver);
+        });
+        confirmBtn.addEventListener('click', confirmSelection);
+        cancelBtn.addEventListener('click', closeModal);
+        clearSelectionBtn.addEventListener('click', () => {
+            resetSelection();
+            updateAllDayCells();
+            updateSelectionPreview();
+        });
+        modal.addEventListener('click', (event) => {
+            if (event.target === modal) closeModal();
+        });
+        searchInput.addEventListener('input', (event) => {
+            const searchTerm = event.target.value.trim().toLowerCase();
+            document.querySelectorAll('#leavesTableBody tr').forEach(row => {
+                row.style.display = row.dataset.employee.toLowerCase().includes(searchTerm) ? '' : 'none';
+            });
+            clearSearchBtn.style.display = searchTerm ? 'block' : 'none';
+        });
+        clearSearchBtn.addEventListener('click', () => {
+            searchInput.value = '';
+            searchInput.dispatchEvent(new Event('input'));
+        });
+    };
+
+    const showMonthlyView = async () => {
+        monthlyViewContainer.style.display = 'block';
+        summaryViewContainer.style.display = 'none';
+        monthlyViewBtn.classList.add('active');
+        summaryViewBtn.classList.remove('active');
+
+        generateTableHeaders();
+        const employees = EmployeeManager.getAll();
+        generateTableRows(employees);
+        const allLeaves = await getAllLeavesData();
+        renderAllEmployeeLeaves(allLeaves);
+    };
+
+    const showSummaryView = async () => {
+        monthlyViewContainer.style.display = 'none';
+        summaryViewContainer.style.display = 'block';
+        monthlyViewBtn.classList.remove('active');
+        summaryViewBtn.classList.add('active');
+
+        const allLeaves = await getAllLeavesData();
+        LeavesSummary.render(summaryViewContainer, allLeaves);
     };
 
     const generateTableHeaders = () => {
@@ -83,9 +169,14 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     };
 
-    const generateTableRows = (employeeNames) => {
+    const generateTableRows = (employees) => {
         leavesTableBody.innerHTML = '';
-        employeeNames.forEach(name => {
+        const sortedEmployeeNames = Object.values(employees)
+            .map(emp => emp.name)
+            .filter(Boolean)
+            .sort();
+
+        sortedEmployeeNames.forEach(name => {
             if (!name) return;
             const tr = document.createElement('tr');
             tr.dataset.employee = name;
@@ -106,20 +197,18 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // --- LOGIKA DANYCH URLOPOWYCH (FIRESTORE) ---
 
-    const loadAllLeavesData = async () => {
+    const getAllLeavesData = async () => {
         try {
             const docRef = db.collection("leaves").doc("mainLeaves");
             const doc = await docRef.get();
             if (doc.exists) {
-                const allLeaves = doc.data();
-                Object.keys(allLeaves).forEach(employeeName => {
-                    const leaves = allLeaves[employeeName] || [];
-                    renderEmployeeLeaves(employeeName, leaves);
-                });
+                return doc.data();
             }
+            return {};
         } catch (error) {
             console.error("Błąd ładowania danych o urlopach:", error);
             window.showToast("Błąd ładowania urlopów.", 5000);
+            return {};
         }
     };
 
@@ -136,8 +225,14 @@ document.addEventListener('DOMContentLoaded', () => {
     };
 
     // --- RENDEROWANIE URLOPÓW W TABELI ---
+    const renderAllEmployeeLeaves = (allLeaves) => {
+        Object.keys(allLeaves).forEach(employeeName => {
+            const leaves = allLeaves[employeeName] || [];
+            renderSingleEmployeeLeaves(employeeName, leaves);
+        });
+    };
 
-    const renderEmployeeLeaves = (employeeName, leaves) => {
+    const renderSingleEmployeeLeaves = (employeeName, leaves) => {
         const employeeRow = leavesTableBody.querySelector(`tr[data-employee="${employeeName}"]`);
         if (!employeeRow) return;
 
@@ -216,18 +311,15 @@ document.addEventListener('DOMContentLoaded', () => {
 
     const loadEmployeeLeavesForModal = async () => {
         try {
-            const docRef = db.collection("leaves").doc("mainLeaves");
-            const doc = await docRef.get();
-            if (doc.exists) {
-                const employeeLeaves = doc.data()[currentEmployee] || [];
-                employeeLeaves.forEach(leave => {
-                    const start = toUTCDate(leave.startDate);
-                    const end = toUTCDate(leave.endDate);
-                    for (let d = new Date(start); d <= end; d.setUTCDate(d.getUTCDate() + 1)) {
-                        singleSelectedDays.add(toDateString(d));
-                    }
-                });
-            }
+            const allLeaves = await getAllLeavesData();
+            const employeeLeaves = allLeaves[currentEmployee] || [];
+            employeeLeaves.forEach(leave => {
+                const start = toUTCDate(leave.startDate);
+                const end = toUTCDate(leave.endDate);
+                for (let d = new Date(start); d <= end; d.setUTCDate(d.getUTCDate() + 1)) {
+                    singleSelectedDays.add(toDateString(d));
+                }
+            });
         } catch (error) {
             console.error("Błąd ładowania urlopów pracownika:", error);
         } finally {
@@ -376,7 +468,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         await saveLeavesData(currentEmployee, newLeaves);
-        renderEmployeeLeaves(currentEmployee, newLeaves);
+        renderSingleEmployeeLeaves(currentEmployee, newLeaves);
         closeModal();
     };
 
@@ -386,11 +478,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const monthToClear = parseInt(cell.dataset.month, 10);
 
         try {
-            const docRef = db.collection("leaves").doc("mainLeaves");
-            const doc = await docRef.get();
-            if (!doc.exists) return;
-
-            const allLeaves = doc.data();
+            const allLeaves = await getAllLeavesData();
             const employeeLeaves = allLeaves[employeeName] || [];
             
             const remainingLeaves = employeeLeaves.filter(leave => {
@@ -400,7 +488,7 @@ document.addEventListener('DOMContentLoaded', () => {
             });
 
             await saveLeavesData(employeeName, remainingLeaves);
-            renderEmployeeLeaves(employeeName, remainingLeaves);
+            renderSingleEmployeeLeaves(employeeName, remainingLeaves);
 
         } catch (error) {
             console.error("Błąd podczas czyszczenia komórki:", error);
@@ -408,75 +496,6 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     };
 
-    // --- OBSŁUGA ZDARZEŃ ---
-    leavesTableBody.addEventListener('click', (event) => {
-        const targetCell = event.target.closest('.day-cell');
-        if (targetCell) openModal(targetCell);
-    });
-
-    leavesTableBody.addEventListener('contextmenu', (event) => {
-        event.preventDefault();
-        const targetCell = event.target.closest('.day-cell');
-        if (targetCell) {
-            activeContextMenuCell = targetCell;
-            contextMenu.style.top = `${event.pageY}px`;
-            contextMenu.style.left = `${event.pageX}px`;
-            contextMenu.classList.add('visible');
-        }
-    });
-
-    document.addEventListener('click', (e) => {
-        if (!contextMenu.contains(e.target)) {
-            contextMenu.classList.remove('visible');
-            activeContextMenuCell = null;
-        }
-    });
-
-    contextClearCell.addEventListener('click', () => {
-        clearCellLeaves(activeContextMenuCell);
-        contextMenu.classList.remove('visible');
-    });
-
-    contextOpenCalendar.addEventListener('click', () => {
-        openModal(activeContextMenuCell);
-        contextMenu.classList.remove('visible');
-    });
-    prevMonthBtn.addEventListener('click', () => {
-        leftCalendarDate.setUTCMonth(leftCalendarDate.getUTCMonth() - 1);
-        generateCalendars();
-    });
-    nextMonthBtn.addEventListener('click', () => {
-        leftCalendarDate.setUTCMonth(leftCalendarDate.getUTCMonth() + 1);
-        generateCalendars();
-    });
-    [leftCalendarGrid, rightCalendarGrid].forEach(grid => {
-        grid.addEventListener('click', handleDayClick);
-        grid.addEventListener('mouseover', handleDayMouseOver);
-    });
-    confirmBtn.addEventListener('click', confirmSelection);
-    cancelBtn.addEventListener('click', closeModal);
-    clearSelectionBtn.addEventListener('click', () => {
-        resetSelection();
-        updateAllDayCells();
-        updateSelectionPreview();
-    });
-    modal.addEventListener('click', (event) => {
-        if (event.target === modal) closeModal();
-    });
-    searchInput.addEventListener('input', (event) => {
-        const searchTerm = event.target.value.trim().toLowerCase();
-        document.querySelectorAll('#leavesTableBody tr').forEach(row => {
-            row.style.display = row.dataset.employee.toLowerCase().includes(searchTerm) ? '' : 'none';
-        });
-        clearSearchBtn.style.display = searchTerm ? 'block' : 'none';
-    });
-    clearSearchBtn.addEventListener('click', () => {
-        searchInput.value = '';
-        searchInput.dispatchEvent(new Event('input'));
-    });
-
     // --- INICJALIZACJA ---
-    initializePage().catch(err => {
-        console.error("Błąd inicjalizacji strony urlopów:", err);
-    });
+    initializePage();
 });
