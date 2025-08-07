@@ -44,20 +44,14 @@
             <button id="summaryViewBtn" class="tab-btn">Podsumowanie Roczne</button>
         </div>
 
-        <div id="monthlyViewContainer">
-            <table id="leavesTable" class="leaves-table">
-                <thead>
-                    <tr id="leavesHeaderRow">
-                    </tr>
-                </thead>
-                <tbody id="leavesTableBody">
-                </tbody>
-            </table>
-        </div>
-
-        <div id="summaryViewContainer" style="display: none;">
-            <!-- Tabela podsumowania zostanie wstrzyknięta tutaj przez JS -->
-        </div>
+        <table id="leavesTable" class="leaves-table">
+            <thead>
+                <tr id="leavesHeaderRow">
+                </tr>
+            </thead>
+            <tbody id="leavesTableBody">
+            </tbody>
+        </table>
     </div>
 
     <div id="contextMenu" class="context-menu">
@@ -72,13 +66,9 @@
             <div class="calendar-header">
                 <button id="prevMonthBtn" class="nav-btn"><i class="fas fa-chevron-left"></i></button>
                 <div class="calendars-container">
-                    <div class="calendar-wrapper">
-                        <h2 id="leftMonthAndYear"></h2>
-                        <div class="calendar-grid" id="leftCalendarGrid"></div>
-                    </div>
-                    <div class="calendar-wrapper">
-                        <h2 id="rightMonthAndYear"></h2>
-                        <div class="calendar-grid" id="rightCalendarGrid"></div>
+                    <div class="calendar-slider-viewport">
+                        <div class="calendar-slider">
+                        </div>
                     </div>
                 </div>
                 <button id="nextMonthBtn" class="nav-btn"><i class="fas fa-chevron-right"></i></button>
@@ -88,9 +78,10 @@
                     <p><strong>Start:</strong> <span id="startDatePreview">-</span></p>
                     <p><strong>Koniec:</strong> <span id="endDatePreview">-</span></p>
                 </div>
-                <div class="selection-mode-info">
-                    <p><kbd>Ctrl</kbd> + klik, aby zaznaczyć pojedyncze dni.</p>
-                </div>
+                <p><strong>Zaplanowano dni:</strong> <span id="workdaysCounter">0</span></p>
+            </div>
+            <div class="selection-mode-info">
+                <p><kbd>Ctrl</kbd> + klik, aby zaznaczyć pojedyncze dni.</p>
             </div>
             <div class="modal-actions">
                 <button id="clearSelectionBtn" class="action-btn">Wyczyść</button>

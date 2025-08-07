@@ -18,16 +18,13 @@ document.addEventListener('DOMContentLoaded', () => {
     // Selektory dla widoków
     const monthlyViewBtn = document.getElementById('monthlyViewBtn');
     const summaryViewBtn = document.getElementById('summaryViewBtn');
-    const monthlyViewContainer = document.getElementById('monthlyViewContainer');
-    const summaryViewContainer = document.getElementById('summaryViewContainer');
 
     // Nowe selektory dla modala z dwoma kalendarzami
-    const leftMonthAndYear = document.getElementById('leftMonthAndYear');
-    const rightMonthAndYear = document.getElementById('rightMonthAndYear');
-    const leftCalendarGrid = document.getElementById('leftCalendarGrid');
-    const rightCalendarGrid = document.getElementById('rightCalendarGrid');
     const startDatePreview = document.getElementById('startDatePreview');
     const endDatePreview = document.getElementById('endDatePreview');
+    const calendarSlider = document.querySelector('.calendar-slider');
+    const workdaysCounter = document.getElementById('workdaysCounter');
+
 
     let currentEmployee = null;
     let currentYear = new Date().getUTCFullYear();
@@ -38,6 +35,7 @@ document.addEventListener('DOMContentLoaded', () => {
     let singleSelectedDays = new Set();
     let isRangeSelectionActive = false;
     let activeContextMenuCell = null;
+    let isAnimating = false;
 
     // --- FUNKCJE POMOCNICZE UTC ---
     const toUTCDate = (dateString) => {
@@ -49,14 +47,29 @@ document.addEventListener('DOMContentLoaded', () => {
         return date.toISOString().split('T')[0];
     };
 
+    /**
+     * Zlicza dni robocze (pon-pt) w danym secie dat.
+     * @param {Set<string>} datesSet - Set z datami w formacie YYYY-MM-DD.
+     * @returns {number} Liczba dni roboczych.
+     */
+    const countWorkdaysInSet = (datesSet) => {
+        let workdays = 0;
+        datesSet.forEach(dateString => {
+            const day = new Date(dateString + 'T00:00:00Z').getUTCDay();
+            if (day !== 0 && day !== 6) { // 0 = Niedziela, 6 = Sobota
+                workdays++;
+            }
+        });
+        return workdays;
+    };
+
     // --- GŁÓWNA LOGIKA APLIKACJI ---
 
     const initializePage = async () => {
-        showLoading(true);
+        loadingOverlay.style.display = 'flex';
         try {
             await EmployeeManager.load();
             setupEventListeners();
-            // Domyślnie pokaż widok miesięczny
             showMonthlyView();
         } catch (error) {
             console.error("Błąd inicjalizacji strony urlopów:", error);
@@ -89,41 +102,38 @@ document.addEventListener('DOMContentLoaded', () => {
         document.addEventListener('click', (e) => {
             if (!contextMenu.contains(e.target)) {
                 contextMenu.classList.remove('visible');
-                activeContextMenuCell = null;
             }
         });
 
         contextClearCell.addEventListener('click', () => {
-            clearCellLeaves(activeContextMenuCell);
+            if (activeContextMenuCell) clearCellLeaves(activeContextMenuCell);
             contextMenu.classList.remove('visible');
         });
 
         contextOpenCalendar.addEventListener('click', () => {
-            openModal(activeContextMenuCell);
+            if (activeContextMenuCell) openModal(activeContextMenuCell);
             contextMenu.classList.remove('visible');
         });
-        prevMonthBtn.addEventListener('click', () => {
-            leftCalendarDate.setUTCMonth(leftCalendarDate.getUTCMonth() - 1);
-            generateCalendars();
-        });
-        nextMonthBtn.addEventListener('click', () => {
-            leftCalendarDate.setUTCMonth(leftCalendarDate.getUTCMonth() + 1);
-            generateCalendars();
-        });
-        [leftCalendarGrid, rightCalendarGrid].forEach(grid => {
-            grid.addEventListener('click', handleDayClick);
-            grid.addEventListener('mouseover', handleDayMouseOver);
-        });
+
+    prevMonthBtn.addEventListener('click', handlePrevMonth);
+    nextMonthBtn.addEventListener('click', handleNextMonth);
+
+    calendarSlider.addEventListener('click', handleDayClick);
+    calendarSlider.addEventListener('mouseover', handleDayMouseOver);
+
         confirmBtn.addEventListener('click', confirmSelection);
         cancelBtn.addEventListener('click', closeModal);
+
         clearSelectionBtn.addEventListener('click', () => {
             resetSelection();
             updateAllDayCells();
             updateSelectionPreview();
         });
+
         modal.addEventListener('click', (event) => {
             if (event.target === modal) closeModal();
         });
+
         searchInput.addEventListener('input', (event) => {
             const searchTerm = event.target.value.trim().toLowerCase();
             document.querySelectorAll('#leavesTableBody tr').forEach(row => {
@@ -131,6 +141,7 @@ document.addEventListener('DOMContentLoaded', () => {
             });
             clearSearchBtn.style.display = searchTerm ? 'block' : 'none';
         });
+
         clearSearchBtn.addEventListener('click', () => {
             searchInput.value = '';
             searchInput.dispatchEvent(new Event('input'));
@@ -138,11 +149,8 @@ document.addEventListener('DOMContentLoaded', () => {
     };
 
     const showMonthlyView = async () => {
-        monthlyViewContainer.style.display = 'block';
-        summaryViewContainer.style.display = 'none';
         monthlyViewBtn.classList.add('active');
         summaryViewBtn.classList.remove('active');
-
         generateTableHeaders();
         const employees = EmployeeManager.getAll();
         generateTableRows(employees);
@@ -151,13 +159,10 @@ document.addEventListener('DOMContentLoaded', () => {
     };
 
     const showSummaryView = async () => {
-        monthlyViewContainer.style.display = 'none';
-        summaryViewContainer.style.display = 'block';
         monthlyViewBtn.classList.remove('active');
         summaryViewBtn.classList.add('active');
-
         const allLeaves = await getAllLeavesData();
-        LeavesSummary.render(summaryViewContainer, allLeaves);
+        LeavesSummary.render(leavesHeaderRow, leavesTableBody, allLeaves);
     };
 
     const generateTableHeaders = () => {
@@ -171,13 +176,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
     const generateTableRows = (employees) => {
         leavesTableBody.innerHTML = '';
-        const sortedEmployeeNames = Object.values(employees)
-            .map(emp => emp.name)
-            .filter(Boolean)
-            .sort();
-
+        const sortedEmployeeNames = Object.values(employees).map(emp => emp.name).filter(Boolean).sort();
         sortedEmployeeNames.forEach(name => {
-            if (!name) return;
             const tr = document.createElement('tr');
             tr.dataset.employee = name;
             const nameTd = document.createElement('td');
@@ -195,16 +195,11 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     };
 
-    // --- LOGIKA DANYCH URLOPOWYCH (FIRESTORE) ---
-
     const getAllLeavesData = async () => {
         try {
             const docRef = db.collection("leaves").doc("mainLeaves");
             const doc = await docRef.get();
-            if (doc.exists) {
-                return doc.data();
-            }
-            return {};
+            return doc.exists ? doc.data() : {};
         } catch (error) {
             console.error("Błąd ładowania danych o urlopach:", error);
             window.showToast("Błąd ładowania urlopów.", 5000);
@@ -214,9 +209,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     const saveLeavesData = async (employeeName, leaves) => {
         try {
-            await db.collection("leaves").doc("mainLeaves").set({
-                [employeeName]: leaves
-            }, { merge: true });
+            await db.collection("leaves").doc("mainLeaves").set({ [employeeName]: leaves }, { merge: true });
             window.showToast('Zapisano urlopy!', 2000);
         } catch (error) {
             console.error('Błąd zapisu urlopów do Firestore:', error);
@@ -224,58 +217,45 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     };
 
-    // --- RENDEROWANIE URLOPÓW W TABELI ---
     const renderAllEmployeeLeaves = (allLeaves) => {
         Object.keys(allLeaves).forEach(employeeName => {
-            const leaves = allLeaves[employeeName] || [];
-            renderSingleEmployeeLeaves(employeeName, leaves);
+            renderSingleEmployeeLeaves(employeeName, allLeaves[employeeName] || []);
         });
     };
 
     const renderSingleEmployeeLeaves = (employeeName, leaves) => {
         const employeeRow = leavesTableBody.querySelector(`tr[data-employee="${employeeName}"]`);
         if (!employeeRow) return;
-
         employeeRow.querySelectorAll('.day-cell').forEach(cell => { cell.innerHTML = ''; });
-
         const leaveColors = {};
         const colors = ['#ffab91', '#ffcc80', '#e6ee9b', '#80deea', '#cf93d9', '#f48fb1'];
         let colorIndex = 0;
-
         leaves.forEach(leave => {
             if (!leave.id || !leave.startDate || !leave.endDate) return;
-
             if (!leaveColors[leave.id]) {
                 leaveColors[leave.id] = colors[colorIndex % colors.length];
                 colorIndex++;
             }
             const bgColor = leaveColors[leave.id];
-
             const start = toUTCDate(leave.startDate);
             const end = toUTCDate(leave.endDate);
-
             let currentMonth = -1;
             for (let d = new Date(start); d <= end; d.setUTCDate(d.getUTCDate() + 1)) {
                 if (d.getUTCFullYear() !== currentYear) continue;
-
                 if (d.getUTCMonth() !== currentMonth) {
                     currentMonth = d.getUTCMonth();
                     const cell = employeeRow.querySelector(`td[data-month="${currentMonth}"]`);
                     if (!cell) continue;
-
                     const monthStart = new Date(Math.max(start, Date.UTC(currentYear, currentMonth, 1)));
                     const monthEnd = new Date(Math.min(end, Date.UTC(currentYear, currentMonth + 1, 0)));
-
                     const div = document.createElement('div');
                     div.classList.add('leave-block');
                     div.style.backgroundColor = bgColor;
-
                     let text = '';
                     if (start < monthStart) text += `<span class="arrow">←</span> `;
                     text += `${monthStart.getUTCDate()}`;
                     if (monthStart.getTime() !== monthEnd.getTime()) text += `-${monthEnd.getUTCDate()}`;
                     if (end > monthEnd) text += ` <span class="arrow">→</span>`;
-                    
                     div.innerHTML = text;
                     cell.appendChild(div);
                 }
@@ -283,17 +263,13 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     };
 
-    // --- LOGIKA MODALA I KALENDARZA ---
-
     const openModal = (cell) => {
         if (!cell) return;
         currentEmployee = cell.closest('tr').dataset.employee;
         const monthIndex = parseInt(cell.dataset.month, 10);
         leftCalendarDate = new Date(Date.UTC(currentYear, monthIndex, 1));
-
         resetSelection();
         loadEmployeeLeavesForModal();
-        
         modal.style.display = 'flex';
     };
 
@@ -307,6 +283,7 @@ document.addEventListener('DOMContentLoaded', () => {
         hoverEndDate = null;
         singleSelectedDays.clear();
         isRangeSelectionActive = false;
+        updateSelectionPreview();
     };
 
     const loadEmployeeLeavesForModal = async () => {
@@ -323,21 +300,21 @@ document.addEventListener('DOMContentLoaded', () => {
         } catch (error) {
             console.error("Błąd ładowania urlopów pracownika:", error);
         } finally {
-            generateCalendars();
+            generateInitialCalendars();
             updateSelectionPreview();
         }
     };
 
-    const generateCalendars = () => {
-        const rightCalendarDate = new Date(leftCalendarDate);
-        rightCalendarDate.setUTCMonth(rightCalendarDate.getUTCMonth() + 1);
-        generateCalendar(leftCalendarGrid, leftMonthAndYear, leftCalendarDate.getUTCFullYear(), leftCalendarDate.getUTCMonth());
-        generateCalendar(rightCalendarGrid, rightMonthAndYear, rightCalendarDate.getUTCFullYear(), rightCalendarDate.getUTCMonth());
-    };
+    const createCalendar = (year, month) => {
+        const calendarWrapper = document.createElement('div');
+        calendarWrapper.className = 'calendar-wrapper';
 
-    const generateCalendar = (grid, header, year, month) => {
-        grid.innerHTML = `<div class="day-name">Po</div><div class="day-name">Wt</div><div class="day-name">Śr</div><div class="day-name">Cz</div><div class="day-name">Pi</div><div class="day-name">So</div><div class="day-name">Ni</div>`;
+        const header = document.createElement('h2');
         header.textContent = `${months[month]} ${year}`;
+
+        const grid = document.createElement('div');
+        grid.className = 'calendar-grid';
+        grid.innerHTML = `<div class="day-name">Po</div><div class="day-name">Wt</div><div class="day-name">Śr</div><div class="day-name">Cz</div><div class="day-name">Pi</div><div class="day-name">So</div><div class="day-name">Ni</div>`;
 
         const firstDayOfMonth = new Date(Date.UTC(year, month, 1));
         const startingDay = (firstDayOfMonth.getUTCDay() === 0) ? 6 : firstDayOfMonth.getUTCDay() - 1;
@@ -348,38 +325,121 @@ document.addEventListener('DOMContentLoaded', () => {
         const daysInMonth = new Date(Date.UTC(year, month + 1, 0)).getUTCDate();
         for (let i = 1; i <= daysInMonth; i++) {
             const dayCell = document.createElement('div');
-            dayCell.classList.add('day-cell-calendar');
+            dayCell.className = 'day-cell-calendar';
             dayCell.textContent = i;
             dayCell.dataset.date = toDateString(new Date(Date.UTC(year, month, i)));
             grid.appendChild(dayCell);
         }
+
+        calendarWrapper.appendChild(header);
+        calendarWrapper.appendChild(grid);
+        return calendarWrapper;
+    };
+
+    const generateInitialCalendars = () => {
+        calendarSlider.innerHTML = '';
+        
+        const currentMonthDate = new Date(leftCalendarDate);
+        const nextMonthDate = new Date(leftCalendarDate);
+        nextMonthDate.setUTCMonth(nextMonthDate.getUTCMonth() + 1);
+
+        calendarSlider.appendChild(createCalendar(currentMonthDate.getUTCFullYear(), currentMonthDate.getUTCMonth()));
+        calendarSlider.appendChild(createCalendar(nextMonthDate.getUTCFullYear(), nextMonthDate.getUTCMonth()));
+        
+        calendarSlider.style.width = '100%';
+        calendarSlider.style.transform = 'translateX(0)';
+
         updateAllDayCells();
+    };
+
+    const handleNextMonth = () => {
+        if (isAnimating) return;
+        isAnimating = true;
+        prevMonthBtn.disabled = true;
+        nextMonthBtn.disabled = true;
+
+        leftCalendarDate.setUTCMonth(leftCalendarDate.getUTCMonth() + 1);
+        
+        const nextMonthDate = new Date(leftCalendarDate);
+        nextMonthDate.setUTCMonth(nextMonthDate.getUTCMonth() + 1);
+        const newCalendar = createCalendar(nextMonthDate.getUTCFullYear(), nextMonthDate.getUTCMonth());
+        
+        calendarSlider.appendChild(newCalendar);
+        calendarSlider.style.transform = 'translateX(-50%)';
+
+        const onTransitionEnd = () => {
+            calendarSlider.removeEventListener('transitionend', onTransitionEnd);
+            calendarSlider.classList.add('no-transition');
+            calendarSlider.removeChild(calendarSlider.firstElementChild);
+            calendarSlider.style.transform = 'translateX(0)';
+            updateAllDayCells();
+
+            void calendarSlider.offsetWidth;
+            calendarSlider.classList.remove('no-transition');
+
+            isAnimating = false;
+            prevMonthBtn.disabled = false;
+            nextMonthBtn.disabled = false;
+        };
+
+        calendarSlider.addEventListener('transitionend', onTransitionEnd);
+    };
+
+    const handlePrevMonth = () => {
+        if (isAnimating) return;
+        isAnimating = true;
+        prevMonthBtn.disabled = true;
+        nextMonthBtn.disabled = true;
+
+        leftCalendarDate.setUTCMonth(leftCalendarDate.getUTCMonth() - 1);
+
+        const newMonthDate = new Date(leftCalendarDate);
+        const newCalendar = createCalendar(newMonthDate.getUTCFullYear(), newMonthDate.getUTCMonth());
+        
+        calendarSlider.insertBefore(newCalendar, calendarSlider.firstElementChild);
+        calendarSlider.classList.add('no-transition');
+        calendarSlider.style.transform = 'translateX(-50%)';
+        
+        void calendarSlider.offsetWidth;
+        calendarSlider.classList.remove('no-transition');
+        calendarSlider.style.transform = 'translateX(0)';
+
+
+        const onTransitionEnd = () => {
+            calendarSlider.removeEventListener('transitionend', onTransitionEnd);
+            calendarSlider.classList.add('no-transition');
+            calendarSlider.removeChild(calendarSlider.lastElementChild);
+            calendarSlider.style.transform = 'translateX(0)';
+            updateAllDayCells();
+            
+            void calendarSlider.offsetWidth;
+            calendarSlider.classList.remove('no-transition');
+
+            isAnimating = false;
+            prevMonthBtn.disabled = false;
+            nextMonthBtn.disabled = false;
+        };
+
+        calendarSlider.addEventListener('transitionend', onTransitionEnd);
     };
 
     const updateAllDayCells = () => {
         document.querySelectorAll('#calendarModal .day-cell-calendar').forEach(cell => {
-            if (cell.dataset.date) {
-                updateDayCellSelection(cell);
-            }
+            if (cell.dataset.date) updateDayCellSelection(cell);
         });
     };
 
     const updateDayCellSelection = (dayCell) => {
         const dateString = dayCell.dataset.date;
-        dayCell.className = 'day-cell-calendar'; // Reset classes
-
+        dayCell.className = 'day-cell-calendar';
         let startStr = selectionStartDate;
         let endStr = hoverEndDate;
         if (startStr && endStr && startStr > endStr) [startStr, endStr] = [endStr, startStr];
-
         const isInRange = isRangeSelectionActive && startStr && endStr && dateString >= startStr && dateString <= endStr;
-        
         if (singleSelectedDays.has(dateString) || isInRange) {
             dayCell.classList.add('selected');
-            
             const isStartDate = dateString === startStr || (singleSelectedDays.has(dateString) && !singleSelectedDays.has(toDateString(new Date(toUTCDate(dateString).getTime() - 86400000))));
             const isEndDate = dateString === endStr || (singleSelectedDays.has(dateString) && !singleSelectedDays.has(toDateString(new Date(toUTCDate(dateString).getTime() + 86400000))));
-
             if (isInRange && dateString !== startStr && dateString !== endStr) dayCell.classList.add('in-range');
             if (isStartDate) dayCell.classList.add('start-date');
             if (isEndDate) dayCell.classList.add('end-date');
@@ -390,7 +450,6 @@ document.addEventListener('DOMContentLoaded', () => {
         const target = event.target.closest('.day-cell-calendar');
         if (!target || !target.dataset.date) return;
         const clickedDate = target.dataset.date;
-
         if (event.ctrlKey || event.metaKey) {
             isRangeSelectionActive = false;
             selectionStartDate = null;
@@ -407,10 +466,8 @@ document.addEventListener('DOMContentLoaded', () => {
                 let start = selectionStartDate;
                 let end = clickedDate;
                 if (start > end) [start, end] = [end, start];
-                
                 const startDate = toUTCDate(start);
                 const endDate = toUTCDate(end);
-
                 for (let d = new Date(startDate); d <= endDate; d.setUTCDate(d.getUTCDate() + 1)) {
                     singleSelectedDays.add(toDateString(d));
                 }
@@ -418,7 +475,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 selectionStartDate = null;
             }
         }
-        
         hoverEndDate = null;
         updateAllDayCells();
         updateSelectionPreview();
@@ -427,7 +483,6 @@ document.addEventListener('DOMContentLoaded', () => {
     const handleDayMouseOver = (event) => {
         const target = event.target.closest('.day-cell-calendar');
         if (!target || !target.dataset.date || !isRangeSelectionActive) return;
-        
         if (hoverEndDate !== target.dataset.date) {
             hoverEndDate = target.dataset.date;
             updateAllDayCells();
@@ -438,24 +493,20 @@ document.addEventListener('DOMContentLoaded', () => {
         const dates = Array.from(singleSelectedDays).sort();
         startDatePreview.textContent = dates.length > 0 ? dates[0] : '-';
         endDatePreview.textContent = dates.length > 0 ? dates[dates.length - 1] : '-';
+        workdaysCounter.textContent = countWorkdaysInSet(singleSelectedDays);
     };
 
     const confirmSelection = async () => {
         if (!currentEmployee) return;
-
         const sortedDays = Array.from(singleSelectedDays).sort();
         const newLeaves = [];
-        
         if (sortedDays.length > 0) {
             let rangeStart = sortedDays[0];
             let rangeEnd = sortedDays[0];
-
             for (let i = 1; i < sortedDays.length; i++) {
-                const prevDay = toUTCDate(sortedDays[i-1]);
+                const prevDay = toUTCDate(sortedDays[i - 1]);
                 const currentDay = toUTCDate(sortedDays[i]);
-                
                 const diff = (currentDay - prevDay) / (1000 * 60 * 60 * 24);
-
                 if (diff === 1) {
                     rangeEnd = sortedDays[i];
                 } else {
@@ -466,7 +517,6 @@ document.addEventListener('DOMContentLoaded', () => {
             }
             newLeaves.push({ id: toUTCDate(rangeStart).getTime().toString(), startDate: rangeStart, endDate: rangeEnd });
         }
-
         await saveLeavesData(currentEmployee, newLeaves);
         renderSingleEmployeeLeaves(currentEmployee, newLeaves);
         closeModal();
@@ -476,26 +526,21 @@ document.addEventListener('DOMContentLoaded', () => {
         if (!cell) return;
         const employeeName = cell.closest('tr').dataset.employee;
         const monthToClear = parseInt(cell.dataset.month, 10);
-
         try {
             const allLeaves = await getAllLeavesData();
             const employeeLeaves = allLeaves[employeeName] || [];
-            
             const remainingLeaves = employeeLeaves.filter(leave => {
                 const start = toUTCDate(leave.startDate);
                 const end = toUTCDate(leave.endDate);
                 return end.getUTCMonth() < monthToClear || start.getUTCMonth() > monthToClear;
             });
-
             await saveLeavesData(employeeName, remainingLeaves);
             renderSingleEmployeeLeaves(employeeName, remainingLeaves);
-
         } catch (error) {
             console.error("Błąd podczas czyszczenia komórki:", error);
             window.showToast("Błąd podczas czyszczenia komórki.", 5000);
         }
     };
 
-    // --- INICJALIZACJA ---
     initializePage();
 });

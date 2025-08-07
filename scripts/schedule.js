@@ -737,7 +737,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // --- INICJALIZACJA ---
     const init = async () => {
-        showLoading(true);
+        loadingOverlay.style.display = 'flex';
         try {
             await EmployeeManager.load();
             await loadSchedule(); // Ładuje dane i renderuje tabelę
