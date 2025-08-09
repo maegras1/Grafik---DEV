@@ -289,3 +289,39 @@
 .calendar-slider.no-transition {
     transition: none;
 }
+
+/* Legenda typów urlopów */
+.leaves-legend {
+    margin-top: 20px;
+    padding: 15px;
+    background-color: #f8f9fa;
+    border: 1px solid #dee2e6;
+    border-radius: 5px;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 20px;
+    align-items: center;
+}
+
+.leaves-legend h4 {
+    margin: 0;
+    margin-right: 10px;
+    font-weight: 600;
+    font-size: 1em;
+    color: #495057;
+}
+
+.legend-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 0.9em;
+}
+
+.legend-color-box {
+    width: 16px;
+    height: 16px;
+    border: 1px solid rgba(0,0,0,0.2);
+    border-radius: 4px;
+    display: inline-block;
+}

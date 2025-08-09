@@ -10,6 +10,7 @@
     <link rel="stylesheet" href="styles/header.css">
     <link rel="stylesheet" href="styles/leaves.css">
     <link rel="stylesheet" href="styles/components.css">
+    <link rel="stylesheet" href="styles/context-menu.css">
 </head>
 <body>
     <div id="loadingOverlay" class="loading-overlay">
@@ -42,6 +43,7 @@
         <div class="view-tabs">
             <button id="monthlyViewBtn" class="tab-btn active">Widok Miesięczny</button>
             <button id="summaryViewBtn" class="tab-btn">Podsumowanie Roczne</button>
+            <button id="careViewBtn" class="tab-btn">Opieka</button>
         </div>
 
         <table id="leavesTable" class="leaves-table">
@@ -52,12 +54,17 @@
             <tbody id="leavesTableBody">
             </tbody>
         </table>
+
+        <div id="careViewContainer" style="display: none;">
+        </div>
+
+        <div id="leavesLegend" class="leaves-legend"></div>
     </div>
 
     <div id="contextMenu" class="context-menu">
         <ul>
-            <li id="contextClearCell"><i class="fas fa-times"></i> Wyczyść komórkę</li>
-            <li id="contextOpenCalendar"><i class="fas fa-calendar-alt"></i> Otwórz kalendarz</li>
+            <li id="contextOpenCalendar"><i class="fas fa-calendar-alt"></i><span>Otwórz kalendarz</span></li>
+            <li id="contextClearCell" class="danger"><i class="fas fa-times"></i><span>Wyczyść komórkę</span></li>
         </ul>
     </div>
 
@@ -83,6 +90,15 @@
             <div class="selection-mode-info">
                 <p><kbd>Ctrl</kbd> + klik, aby zaznaczyć pojedyncze dni.</p>
             </div>
+            <div class="leave-type-selector">
+                <label for="leaveTypeSelect">Typ urlopu:</label>
+                <select id="leaveTypeSelect">
+                    <option value="vacation" selected>Wypoczynkowy</option>
+                    <option value="child_care_art_188">Opieka nad dzieckiem (art. 188 kp)</option>
+                    <option value="sick_child_care">Opieka nad chorym dzieckiem (zasiłek)</option>
+                    <option value="family_member_care">Opieka nad innym chorym członkiem rodziny (zasiłek)</option>
+                </select>
+            </div>
             <div class="modal-actions">
                 <button id="clearSelectionBtn" class="action-btn">Wyczyść</button>
                 <button id="confirmSelectionBtn" class="action-btn confirm-btn">Zatwierdź</button>
@@ -100,7 +116,9 @@
     <script src="scripts/common.js"></script>
     <script src="scripts/employee-manager.js"></script>
     <script src="scripts/shared.js"></script>
+    <script src="scripts/context-menu.js"></script>
     <script src="scripts/leaves.js"></script>
     <script src="scripts/leaves-summary.js"></script>
+    <script src="scripts/leaves-care-summary.js"></script>
 </body>
 </html>

@@ -26,6 +26,18 @@ const LeavesSummary = (() => {
     };
 
     /**
+     * Zwraca kolor tła w zależności od liczby pozostałych dni urlopu.
+     * @param {number} days - Liczba pozostałych dni.
+     * @returns {string} Kolor tła w formacie hex.
+     */
+    const getRemainingDaysColor = (days) => {
+        if (days > 10) return '#d4edda'; // Zielony
+        if (days > 2) return '#fff3cd';  // Żółty
+        if (days > 0) return '#ffeeba';  // Pomarańczowy
+        return '#f8d7da';               // Czerwony
+    };
+
+    /**
      * Renderuje tabelę podsumowania rocznego urlopów w istniejącej strukturze tabeli.
      * @param {HTMLElement} tableHeader - Element <tr> nagłówka tabeli.
      * @param {HTMLElement} tableBody - Element <tbody> tabeli.
@@ -88,7 +100,7 @@ const LeavesSummary = (() => {
                 <td><strong>${total}</strong></td>
                 <td>${usedDays}</td>
                 <td>${scheduledDays}</td>
-                <td><strong>${remaining}</strong></td>
+                <td style="background-color: ${getRemainingDaysColor(remaining)};"><strong>${remaining}</strong></td>
             `;
         }
     };

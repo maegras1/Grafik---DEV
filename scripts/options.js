@@ -206,18 +206,24 @@ document.addEventListener('DOMContentLoaded', () => {
                 const scheduleRef = db.collection("schedules").doc("mainSchedule");
                 const leavesRef = db.collection("leaves").doc("mainLeaves");
 
+                // --- FAZA ODCZYTU ---
+                // Najpierw odczytujemy wszystkie potrzebne dokumenty.
+                const scheduleDoc = await transaction.get(scheduleRef);
+                const leavesDoc = await transaction.get(leavesRef);
+
+                // --- FAZA ZAPISU ---
+                // Teraz, gdy mamy dane, wykonujemy wszystkie operacje zapisu.
+
                 // 1. Usuń pracownika z obiektu 'employees'
                 transaction.update(scheduleRef, {
                     [`employees.${selectedEmployeeIndex}`]: FieldValue.delete()
                 });
 
                 // 2. Wyczyść dane tego pracownika z grafiku
-                const scheduleDoc = await transaction.get(scheduleRef);
                 const scheduleData = scheduleDoc.data();
-                if (scheduleData.scheduleCells) {
+                if (scheduleData && scheduleData.scheduleCells) {
                     Object.keys(scheduleData.scheduleCells).forEach(time => {
                         if (scheduleData.scheduleCells[time]?.[selectedEmployeeIndex]) {
-                            // Używamy FieldValue.delete() także tutaj
                             transaction.update(scheduleRef, {
                                 [`scheduleCells.${time}.${selectedEmployeeIndex}`]: FieldValue.delete()
                             });
@@ -226,7 +232,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
 
                 // 3. Usuń dane z urlopów
-                const leavesDoc = await transaction.get(leavesRef);
                 if (leavesDoc.exists && leavesDoc.data()[employee.name]) {
                     transaction.update(leavesRef, {
                         [employee.name]: FieldValue.delete()

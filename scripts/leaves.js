@@ -11,13 +11,14 @@ document.addEventListener('DOMContentLoaded', () => {
     const clearSelectionBtn = document.getElementById('clearSelectionBtn');
     const searchInput = document.getElementById('searchInput');
     const clearSearchBtn = document.getElementById('clearSearch');
-    const contextMenu = document.getElementById('contextMenu');
-    const contextClearCell = document.getElementById('contextClearCell');
-    const contextOpenCalendar = document.getElementById('contextOpenCalendar');
 
     // Selektory dla widoków
     const monthlyViewBtn = document.getElementById('monthlyViewBtn');
     const summaryViewBtn = document.getElementById('summaryViewBtn');
+    const careViewBtn = document.getElementById('careViewBtn');
+    const monthlyViewContainer = document.getElementById('leavesTable');
+    const careViewContainer = document.getElementById('careViewContainer');
+
 
     // Nowe selektory dla modala z dwoma kalendarzami
     const startDatePreview = document.getElementById('startDatePreview');
@@ -34,8 +35,16 @@ document.addEventListener('DOMContentLoaded', () => {
     let hoverEndDate = null;
     let singleSelectedDays = new Set();
     let isRangeSelectionActive = false;
-    let activeContextMenuCell = null;
     let isAnimating = false;
+    let dateToTypeMap = new Map();
+
+    const LEAVE_TYPE_COLORS = {
+        vacation: '#80deea', // Błękitny
+        child_care_art_188: '#ffcc80', // Pomarańczowy
+        sick_child_care: '#f48fb1', // Różowy
+        family_member_care: '#cf93d9', // Fioletowy
+        default: '#e6ee9b' // Domyślny
+    };
 
     // --- FUNKCJE POMOCNICZE UTC ---
     const toUTCDate = (dateString) => {
@@ -65,12 +74,36 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // --- GŁÓWNA LOGIKA APLIKACJI ---
 
+    const generateLegend = () => {
+        const legendContainer = document.getElementById('leavesLegend');
+        legendContainer.innerHTML = '<h4>Legenda:</h4>';
+        const leaveTypeSelect = document.getElementById('leaveTypeSelect');
+        
+        Array.from(leaveTypeSelect.options).forEach(option => {
+            const key = option.value;
+            const color = LEAVE_TYPE_COLORS[key] || LEAVE_TYPE_COLORS.default;
+            const legendItem = document.createElement('div');
+            legendItem.className = 'legend-item';
+            legendItem.innerHTML = `<span class="legend-color-box" style="background-color: ${color};"></span> ${option.textContent}`;
+            legendContainer.appendChild(legendItem);
+        });
+    };
+
     const initializePage = async () => {
         loadingOverlay.style.display = 'flex';
         try {
             await EmployeeManager.load();
             setupEventListeners();
             showMonthlyView();
+            generateLegend();
+
+            // --- Inicjalizacja Menu Kontekstowego ---
+            const contextMenuItems = [
+                { id: 'contextOpenCalendar', action: (cell) => openModal(cell) },
+                { id: 'contextClearCell', action: (cell) => clearCellLeaves(cell) }
+            ];
+            window.initializeContextMenu('contextMenu', '.day-cell', contextMenuItems);
+
         } catch (error) {
             console.error("Błąd inicjalizacji strony urlopów:", error);
             window.showToast("Nie udało się załadować danych.", 5000);
@@ -82,37 +115,11 @@ document.addEventListener('DOMContentLoaded', () => {
     const setupEventListeners = () => {
         monthlyViewBtn.addEventListener('click', showMonthlyView);
         summaryViewBtn.addEventListener('click', showSummaryView);
+        careViewBtn.addEventListener('click', showCareView);
         
         leavesTableBody.addEventListener('click', (event) => {
             const targetCell = event.target.closest('.day-cell');
             if (targetCell) openModal(targetCell);
-        });
-
-        leavesTableBody.addEventListener('contextmenu', (event) => {
-            event.preventDefault();
-            const targetCell = event.target.closest('.day-cell');
-            if (targetCell) {
-                activeContextMenuCell = targetCell;
-                contextMenu.style.top = `${event.pageY}px`;
-                contextMenu.style.left = `${event.pageX}px`;
-                contextMenu.classList.add('visible');
-            }
-        });
-
-        document.addEventListener('click', (e) => {
-            if (!contextMenu.contains(e.target)) {
-                contextMenu.classList.remove('visible');
-            }
-        });
-
-        contextClearCell.addEventListener('click', () => {
-            if (activeContextMenuCell) clearCellLeaves(activeContextMenuCell);
-            contextMenu.classList.remove('visible');
-        });
-
-        contextOpenCalendar.addEventListener('click', () => {
-            if (activeContextMenuCell) openModal(activeContextMenuCell);
-            contextMenu.classList.remove('visible');
         });
 
     prevMonthBtn.addEventListener('click', handlePrevMonth);
@@ -151,6 +158,11 @@ document.addEventListener('DOMContentLoaded', () => {
     const showMonthlyView = async () => {
         monthlyViewBtn.classList.add('active');
         summaryViewBtn.classList.remove('active');
+        careViewBtn.classList.remove('active');
+
+        monthlyViewContainer.style.display = '';
+        careViewContainer.style.display = 'none';
+
         generateTableHeaders();
         const employees = EmployeeManager.getAll();
         generateTableRows(employees);
@@ -161,8 +173,25 @@ document.addEventListener('DOMContentLoaded', () => {
     const showSummaryView = async () => {
         monthlyViewBtn.classList.remove('active');
         summaryViewBtn.classList.add('active');
+        careViewBtn.classList.remove('active');
+        
+        monthlyViewContainer.style.display = ''; // Podsumowanie roczne używa tej samej tabeli
+        careViewContainer.style.display = 'none';
+
         const allLeaves = await getAllLeavesData();
         LeavesSummary.render(leavesHeaderRow, leavesTableBody, allLeaves);
+    };
+
+    const showCareView = async () => {
+        monthlyViewBtn.classList.remove('active');
+        summaryViewBtn.classList.remove('active');
+        careViewBtn.classList.add('active');
+
+        monthlyViewContainer.style.display = 'none';
+        careViewContainer.style.display = 'block';
+
+        const allLeaves = await getAllLeavesData();
+        LeavesCareSummary.render(careViewContainer, allLeaves);
     };
 
     const generateTableHeaders = () => {
@@ -227,16 +256,11 @@ document.addEventListener('DOMContentLoaded', () => {
         const employeeRow = leavesTableBody.querySelector(`tr[data-employee="${employeeName}"]`);
         if (!employeeRow) return;
         employeeRow.querySelectorAll('.day-cell').forEach(cell => { cell.innerHTML = ''; });
-        const leaveColors = {};
-        const colors = ['#ffab91', '#ffcc80', '#e6ee9b', '#80deea', '#cf93d9', '#f48fb1'];
-        let colorIndex = 0;
+
         leaves.forEach(leave => {
             if (!leave.id || !leave.startDate || !leave.endDate) return;
-            if (!leaveColors[leave.id]) {
-                leaveColors[leave.id] = colors[colorIndex % colors.length];
-                colorIndex++;
-            }
-            const bgColor = leaveColors[leave.id];
+            
+            const bgColor = LEAVE_TYPE_COLORS[leave.type] || LEAVE_TYPE_COLORS.default;
             const start = toUTCDate(leave.startDate);
             const end = toUTCDate(leave.endDate);
             let currentMonth = -1;
@@ -268,6 +292,7 @@ document.addEventListener('DOMContentLoaded', () => {
         currentEmployee = cell.closest('tr').dataset.employee;
         const monthIndex = parseInt(cell.dataset.month, 10);
         leftCalendarDate = new Date(Date.UTC(currentYear, monthIndex, 1));
+        dateToTypeMap.clear();
         resetSelection();
         loadEmployeeLeavesForModal();
         modal.style.display = 'flex';
@@ -294,7 +319,10 @@ document.addEventListener('DOMContentLoaded', () => {
                 const start = toUTCDate(leave.startDate);
                 const end = toUTCDate(leave.endDate);
                 for (let d = new Date(start); d <= end; d.setUTCDate(d.getUTCDate() + 1)) {
-                    singleSelectedDays.add(toDateString(d));
+                    const dateString = toDateString(d);
+                    singleSelectedDays.add(dateString);
+                    // Zapisz typ dla każdego dnia istniejącego urlopu
+                    dateToTypeMap.set(dateString, leave.type || 'vacation');
                 }
             });
         } catch (error) {
@@ -498,24 +526,47 @@ document.addEventListener('DOMContentLoaded', () => {
 
     const confirmSelection = async () => {
         if (!currentEmployee) return;
+
+        const leaveTypeSelect = document.getElementById('leaveTypeSelect');
+        const selectedLeaveType = leaveTypeSelect.value;
+
         const sortedDays = Array.from(singleSelectedDays).sort();
         const newLeaves = [];
         if (sortedDays.length > 0) {
             let rangeStart = sortedDays[0];
             let rangeEnd = sortedDays[0];
+
             for (let i = 1; i < sortedDays.length; i++) {
                 const prevDay = toUTCDate(sortedDays[i - 1]);
                 const currentDay = toUTCDate(sortedDays[i]);
                 const diff = (currentDay - prevDay) / (1000 * 60 * 60 * 24);
-                if (diff === 1) {
+
+                // Sprawdź, czy typ bieżącego dnia jest taki sam jak typ dnia początkowego zakresu
+                const startType = dateToTypeMap.get(rangeStart) || selectedLeaveType;
+                const currentType = dateToTypeMap.get(sortedDays[i]) || selectedLeaveType;
+
+                if (diff === 1 && startType === currentType) {
                     rangeEnd = sortedDays[i];
                 } else {
-                    newLeaves.push({ id: toUTCDate(rangeStart).getTime().toString(), startDate: rangeStart, endDate: rangeEnd });
+                    // Zapisz poprzedni blok
+                    newLeaves.push({
+                        id: toUTCDate(rangeStart).getTime().toString(),
+                        startDate: rangeStart,
+                        endDate: rangeEnd,
+                        type: startType
+                    });
+                    // Rozpocznij nowy blok
                     rangeStart = sortedDays[i];
                     rangeEnd = sortedDays[i];
                 }
             }
-            newLeaves.push({ id: toUTCDate(rangeStart).getTime().toString(), startDate: rangeStart, endDate: rangeEnd });
+            // Zapisz ostatni blok
+            newLeaves.push({
+                id: toUTCDate(rangeStart).getTime().toString(),
+                startDate: rangeStart,
+                endDate: rangeEnd,
+                type: dateToTypeMap.get(rangeStart) || selectedLeaveType
+            });
         }
         await saveLeavesData(currentEmployee, newLeaves);
         renderSingleEmployeeLeaves(currentEmployee, newLeaves);

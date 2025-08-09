@@ -3,20 +3,11 @@ document.addEventListener('DOMContentLoaded', () => {
     const mainTable = document.getElementById('mainScheduleTable');
     const tableHeaderRow = document.getElementById('tableHeaderRow');
     const tbody = mainTable.querySelector('tbody');
-    const contextMenu = document.getElementById('contextMenu');
     const undoButton = document.getElementById('undoButton');
     const searchInput = document.getElementById('searchInput');
     const clearSearchButton = document.getElementById('clearSearchButton');
 
     // Context Menu Options
-    const contextSplitCell = document.getElementById('contextSplitCell');
-    const contextAddBreak = document.getElementById('contextAddBreak');
-    const contextMassage = document.getElementById('contextMassage');
-    const contextPnf = document.getElementById('contextPnf');
-    const contextClear = document.getElementById('contextClear');
-    const contextRemoveBreak = document.getElementById('contextRemoveBreak');
-
-    let currentCell = null; // The TD cell that the context menu is acting upon
     let draggedCell = null;
     let activeCell = null; // The currently focused element for keyboard nav (TD, TH, or DIV)
 
@@ -371,6 +362,14 @@ document.addEventListener('DOMContentLoaded', () => {
             cell.innerHTML = htmlContent;
             cell.style.backgroundColor = (getElementText(cell).trim() !== '') ? CONTENT_CELL_COLOR : DEFAULT_CELL_COLOR;
         }
+
+        // Dodanie znacznika końca zabiegów
+        if (cellObj.treatmentEndDate) {
+            const today = new Date().toISOString().split('T')[0];
+            if (cellObj.treatmentEndDate <= today) {
+                cell.classList.add('treatment-end-marker');
+            }
+        }
     };
 
     const loadSchedule = async () => {
@@ -394,7 +393,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const saveSchedule = async () => {
         console.log("Attempting to save schedule...");
         try {
-            await db.collection("schedules").doc("mainSchedule").set(appState);
+            await db.collection("schedules").doc("mainSchedule").set(appState, { merge: true });
             console.log("Schedule successfully written to Firestore.");
             window.showToast('Zapisano w Firestore!', 2000);
         } catch (error) {
@@ -465,31 +464,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if (target) enterEditMode(target);
     });
 
-    mainTable.addEventListener('contextmenu', (event) => {
-        const target = event.target.closest('td.editable-cell');
-        if (target) {
-            event.preventDefault();
-            setActiveCell(target);
-            currentCell = target;
-
-            const isBreak = currentCell.classList.contains('break-cell');
-            contextAddBreak.style.display = isBreak ? 'none' : 'flex';
-            contextRemoveBreak.style.display = isBreak ? 'flex' : 'none';
-            contextClear.style.display = isBreak ? 'none' : 'flex';
-            contextSplitCell.style.display = isBreak ? 'none' : 'flex';
-            contextMassage.style.display = isBreak ? 'none' : 'flex';
-            contextPnf.style.display = isBreak ? 'none' : 'flex';
-            
-            contextMenu.classList.add('visible');
-            contextMenu.style.left = `${event.pageX}px`;
-            contextMenu.style.top = `${event.pageY}px`;
-        }
-    });
-
     document.addEventListener('click', (event) => {
-        if (!contextMenu.contains(event.target)) {
-            contextMenu.classList.remove('visible');
-        }
         if (!event.target.closest('.active-cell')) {
              if (activeCell && activeCell.getAttribute('contenteditable') === 'true') {
                 exitEditMode(activeCell);
@@ -499,11 +474,11 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     // Context Menu Actions
-    const updateCellState = (updateFn) => {
-        if (!currentCell) return;
+    const updateCellState = (cell, updateFn) => {
+        if (!cell) return;
         undoManager.pushState(getCurrentTableState());
-        const time = currentCell.dataset.time;
-        const employeeIndex = currentCell.dataset.employeeIndex;
+        const time = cell.dataset.time;
+        const employeeIndex = cell.dataset.employeeIndex;
         if (!appState.scheduleCells[time]) appState.scheduleCells[time] = {};
         let cellState = appState.scheduleCells[time][employeeIndex] || {};
         
@@ -514,35 +489,10 @@ document.addEventListener('DOMContentLoaded', () => {
         renderTable();
         saveSchedule();
         undoManager.pushState(getCurrentTableState());
-        contextMenu.classList.remove('visible');
     };
 
-    contextAddBreak.addEventListener('click', () => updateCellState(state => {
-        state.isBreak = true;
-        window.showToast('Dodano przerwę');
-    }));
-
-    contextRemoveBreak.addEventListener('click', () => updateCellState(state => {
-        delete state.isBreak;
-        window.showToast('Usunięto przerwę');
-    }));
-    
-    contextClear.addEventListener('click', () => updateCellState(state => {
-        // Usuwa wszystkie właściwości z obiektu stanu komórki, skutecznie go czyszcząc
-        Object.keys(state).forEach(key => delete state[key]);
-        window.showToast('Wyczyszczono komórkę');
-    }));
-
-    contextSplitCell.addEventListener('click', () => updateCellState(state => {
-        state.content1 = state.content || '';
-        state.content2 = '';
-        delete state.content;
-        state.isSplit = true;
-        window.showToast('Podzielono komórkę');
-    }));
-
-    const toggleSpecialStyle = (dataAttribute) => {
-        updateCellState(state => {
+    const toggleSpecialStyle = (cell, dataAttribute) => {
+        updateCellState(cell, state => {
             state[dataAttribute] = !state[dataAttribute];
              if (state.isSplit) {
                 state[`${dataAttribute}1`] = state[dataAttribute];
@@ -551,9 +501,6 @@ document.addEventListener('DOMContentLoaded', () => {
             window.showToast('Zmieniono styl');
         });
     };
-
-    contextMassage.addEventListener('click', () => toggleSpecialStyle('isMassage', 'isMassage'));
-    contextPnf.addEventListener('click', () => toggleSpecialStyle('isPnf', 'isPnf'));
 
     // Drag and Drop
     mainTable.addEventListener('dragstart', (event) => {
@@ -653,8 +600,7 @@ document.addEventListener('DOMContentLoaded', () => {
             event.preventDefault();
             const cellToClear = activeCell.closest('td.editable-cell');
             if (cellToClear) {
-                currentCell = cellToClear; // Ustawienie globalnej referencji dla updateCellState
-                updateCellState(state => {
+                updateCellState(cellToClear, state => {
                     // Usuwa wszystkie właściwości z obiektu stanu komórki, skutecznie go czyszcząc
                     Object.keys(state).forEach(key => delete state[key]);
                     window.showToast('Wyczyszczono komórkę');
@@ -736,12 +682,97 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     // --- INICJALIZACJA ---
+    const openPatientInfoModal = (cell) => {
+        const patientName = getElementText(cell);
+        if (!patientName) {
+            window.showToast("Brak pacjenta w tej komórce.", 3000);
+            return;
+        }
+
+        const modal = document.getElementById('patientInfoModal');
+        const patientNameInput = document.getElementById('patientName');
+        const startDateInput = document.getElementById('treatmentStartDate');
+        const extensionDaysInput = document.getElementById('treatmentExtensionDays');
+        const endDateInput = document.getElementById('treatmentEndDate');
+        const saveModalBtn = document.getElementById('savePatientInfoModal');
+        const closeModalBtn = document.getElementById('closePatientInfoModal');
+
+        const time = cell.dataset.time;
+        const employeeIndex = cell.dataset.employeeIndex;
+        const cellState = appState.scheduleCells[time]?.[employeeIndex] || {};
+
+        patientNameInput.value = patientName;
+        startDateInput.value = cellState.treatmentStartDate || new Date().toISOString().split('T')[0];
+        extensionDaysInput.value = cellState.treatmentExtensionDays || 0;
+
+        const calculateEndDate = (startDate, extensionDays) => {
+            let endDate = new Date(startDate);
+            let totalDays = 15 + parseInt(extensionDays, 10);
+            let daysAdded = 0;
+            while (daysAdded < totalDays) {
+                endDate.setDate(endDate.getDate() + 1);
+                const dayOfWeek = endDate.getDay();
+                if (dayOfWeek !== 0 && dayOfWeek !== 6) { // Pomijaj niedzielę (0) i sobotę (6)
+                    daysAdded++;
+                }
+            }
+            return endDate.toISOString().split('T')[0];
+        };
+
+        const updateEndDate = () => {
+            endDateInput.value = calculateEndDate(startDateInput.value, extensionDaysInput.value);
+        };
+
+        updateEndDate();
+
+        startDateInput.addEventListener('change', updateEndDate);
+        extensionDaysInput.addEventListener('input', updateEndDate);
+
+        const closeModal = () => {
+            startDateInput.removeEventListener('change', updateEndDate);
+            extensionDaysInput.removeEventListener('input', updateEndDate);
+            modal.style.display = 'none';
+        };
+
+        saveModalBtn.onclick = () => {
+            updateCellState(cell, state => {
+                state.treatmentStartDate = startDateInput.value;
+                state.treatmentExtensionDays = parseInt(extensionDaysInput.value, 10);
+                state.treatmentEndDate = endDateInput.value;
+            });
+            window.showToast("Zapisano daty zabiegów.");
+            closeModal();
+        };
+
+        closeModalBtn.onclick = closeModal;
+        modal.onclick = (event) => {
+            if (event.target === modal) {
+                closeModal();
+            }
+        };
+
+        modal.style.display = 'flex';
+    };
+
     const init = async () => {
         loadingOverlay.style.display = 'flex';
         try {
             await EmployeeManager.load();
             await loadSchedule(); // Ładuje dane i renderuje tabelę
             undoManager.initialize(getCurrentTableState());
+
+            // --- Inicjalizacja Menu Kontekstowego ---
+            const contextMenuItems = [
+                { id: 'contextPatientInfo', class: 'info', condition: cell => !cell.classList.contains('break-cell') && getElementText(cell).trim() !== '', action: cell => openPatientInfoModal(cell) },
+                { id: 'contextAddBreak', action: cell => updateCellState(cell, state => { state.isBreak = true; window.showToast('Dodano przerwę'); }) },
+                { id: 'contextRemoveBreak', class: 'danger', condition: cell => cell.classList.contains('break-cell'), action: cell => updateCellState(cell, state => { delete state.isBreak; window.showToast('Usunięto przerwę'); }) },
+                { id: 'contextClear', class: 'danger', action: cell => updateCellState(cell, state => { Object.keys(state).forEach(key => delete state[key]); window.showToast('Wyczyszczono komórkę'); }) },
+                { id: 'contextSplitCell', action: cell => updateCellState(cell, state => { state.content1 = state.content || ''; state.content2 = ''; delete state.content; state.isSplit = true; window.showToast('Podzielono komórkę'); }) },
+                { id: 'contextMassage', action: cell => toggleSpecialStyle(cell, 'isMassage') },
+                { id: 'contextPnf', action: cell => toggleSpecialStyle(cell, 'isPnf') }
+            ];
+            window.initializeContextMenu('contextMenu', 'td.editable-cell', contextMenuItems);
+
         } catch (error) {
             console.error("Błąd inicjalizacji strony harmonogramu:", error);
             window.showToast("Nie udało się załadować danych.", 5000);
