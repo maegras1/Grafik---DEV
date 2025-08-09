@@ -16,9 +16,9 @@ const EmployeeManager = (() => {
                 console.warn("Brak obiektu 'employees' w Firestore. Inicjalizacja pustego stanu.");
             }
         } catch (error) {
-            console.error("Błąd krytyczny przy pobieraniu danych pracowników:", error);
-            window.showToast("Błąd pobierania danych pracowników!", 5000);
-            _employees = {}; // W razie błędu zwróć pusty obiekt
+            console.error("Błąd krytyczny podczas pobierania danych pracowników z Firestore:", error);
+            window.showToast("Wystąpił błąd podczas pobierania listy pracowników. Spróbuj odświeżyć stronę.", 5000);
+            _employees = {}; // W razie błędu zwróć pusty obiekt, aby aplikacja mogła działać w ograniczonym zakresie
         }
     };
 

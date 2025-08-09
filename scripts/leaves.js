@@ -38,14 +38,6 @@ document.addEventListener('DOMContentLoaded', () => {
     let isAnimating = false;
     let dateToTypeMap = new Map();
 
-    const LEAVE_TYPE_COLORS = {
-        vacation: '#80deea', // Błękitny
-        child_care_art_188: '#ffcc80', // Pomarańczowy
-        sick_child_care: '#f48fb1', // Różowy
-        family_member_care: '#cf93d9', // Fioletowy
-        default: '#e6ee9b' // Domyślny
-    };
-
     // --- FUNKCJE POMOCNICZE UTC ---
     const toUTCDate = (dateString) => {
         const [year, month, day] = dateString.split('-').map(Number);
@@ -81,7 +73,7 @@ document.addEventListener('DOMContentLoaded', () => {
         
         Array.from(leaveTypeSelect.options).forEach(option => {
             const key = option.value;
-            const color = LEAVE_TYPE_COLORS[key] || LEAVE_TYPE_COLORS.default;
+            const color = AppConfig.leaves.leaveTypeColors[key] || AppConfig.leaves.leaveTypeColors.default;
             const legendItem = document.createElement('div');
             legendItem.className = 'legend-item';
             legendItem.innerHTML = `<span class="legend-color-box" style="background-color: ${color};"></span> ${option.textContent}`;
@@ -94,7 +86,7 @@ document.addEventListener('DOMContentLoaded', () => {
         try {
             await EmployeeManager.load();
             setupEventListeners();
-            showMonthlyView();
+            await showMonthlyView();
             generateLegend();
 
             // --- Inicjalizacja Menu Kontekstowego ---
@@ -106,7 +98,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
         } catch (error) {
             console.error("Błąd inicjalizacji strony urlopów:", error);
-            window.showToast("Nie udało się załadować danych.", 5000);
+            window.showToast("Wystąpił krytyczny błąd inicjalizacji. Odśwież stronę.", 5000);
         } finally {
             hideLoadingOverlay(loadingOverlay);
         }
@@ -226,23 +218,23 @@ document.addEventListener('DOMContentLoaded', () => {
 
     const getAllLeavesData = async () => {
         try {
-            const docRef = db.collection("leaves").doc("mainLeaves");
+            const docRef = db.collection(AppConfig.firestore.collections.leaves).doc(AppConfig.firestore.docs.mainLeaves);
             const doc = await docRef.get();
             return doc.exists ? doc.data() : {};
         } catch (error) {
-            console.error("Błąd ładowania danych o urlopach:", error);
-            window.showToast("Błąd ładowania urlopów.", 5000);
-            return {};
+            console.error("Błąd podczas ładowania danych o urlopach z Firestore:", error);
+            window.showToast("Wystąpił błąd podczas ładowania danych o urlopach. Spróbuj ponownie.", 5000);
+            return {}; // Zwróć pusty obiekt w przypadku błędu, aby uniknąć dalszych problemów
         }
     };
 
     const saveLeavesData = async (employeeName, leaves) => {
         try {
-            await db.collection("leaves").doc("mainLeaves").set({ [employeeName]: leaves }, { merge: true });
-            window.showToast('Zapisano urlopy!', 2000);
+            await db.collection(AppConfig.firestore.collections.leaves).doc(AppConfig.firestore.docs.mainLeaves).set({ [employeeName]: leaves }, { merge: true });
+            window.showToast('Urlopy zapisane pomyślnie.', 2000);
         } catch (error) {
-            console.error('Błąd zapisu urlopów do Firestore:', error);
-            window.showToast('Błąd zapisu urlopów!', 5000);
+            console.error('Błąd podczas zapisu urlopów do Firestore:', error);
+            window.showToast('Wystąpił błąd podczas zapisu urlopów. Spróbuj ponownie.', 5000);
         }
     };
 
@@ -260,7 +252,7 @@ document.addEventListener('DOMContentLoaded', () => {
         leaves.forEach(leave => {
             if (!leave.id || !leave.startDate || !leave.endDate) return;
             
-            const bgColor = LEAVE_TYPE_COLORS[leave.type] || LEAVE_TYPE_COLORS.default;
+            const bgColor = AppConfig.leaves.leaveTypeColors[leave.type] || AppConfig.leaves.leaveTypeColors.default;
             const start = toUTCDate(leave.startDate);
             const end = toUTCDate(leave.endDate);
             let currentMonth = -1;
@@ -326,7 +318,8 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
             });
         } catch (error) {
-            console.error("Błąd ładowania urlopów pracownika:", error);
+            console.error("Błąd ładowania urlopów pracownika do modala:", error);
+            window.showToast("Nie udało się załadować szczegółów urlopu.", 5000);
         } finally {
             generateInitialCalendars();
             updateSelectionPreview();
@@ -588,8 +581,8 @@ document.addEventListener('DOMContentLoaded', () => {
             await saveLeavesData(employeeName, remainingLeaves);
             renderSingleEmployeeLeaves(employeeName, remainingLeaves);
         } catch (error) {
-            console.error("Błąd podczas czyszczenia komórki:", error);
-            window.showToast("Błąd podczas czyszczenia komórki.", 5000);
+            console.error("Błąd podczas czyszczenia urlopów w komórce:", error);
+            window.showToast("Wystąpił błąd podczas czyszczenia urlopów. Spróbuj ponownie.", 5000);
         }
     };
 

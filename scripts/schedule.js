@@ -17,7 +17,7 @@ document.addEventListener('DOMContentLoaded', () => {
     };
 
     const undoManager = new UndoManager({
-        maxStates: MAX_UNDO_STATES,
+        maxStates: AppConfig.undoManager.maxStates,
         onUpdate: (manager) => {
             undoButton.disabled = !manager.canUndo();
         }
@@ -61,7 +61,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const highlightDuplicates = (searchText) => {
         clearDuplicateHighlights();
         const cleanedSearchText = searchText.trim().toLowerCase();
-        if (cleanedSearchText === '' || cleanedSearchText === BREAK_TEXT.toLowerCase()) {
+        if (cleanedSearchText === '' || cleanedSearchText === AppConfig.schedule.breakText.toLowerCase()) {
             return;
         }
         const allCells = document.querySelectorAll('td.editable-cell');
@@ -291,9 +291,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
         // Renderowanie wierszy i komórek
         tbody.innerHTML = '';
-        for (let hour = START_HOUR; hour <= END_HOUR; hour++) {
+        for (let hour = AppConfig.schedule.startHour; hour <= AppConfig.schedule.endHour; hour++) {
             for (let minute = 0; minute < 60; minute += 30) {
-                if (hour === END_HOUR && minute === 30) continue;
+                if (hour === AppConfig.schedule.endHour && minute === 30) continue;
                 const tr = tbody.insertRow();
                 const timeString = `${hour}:${minute.toString().padStart(2, '0')}`;
                 tr.insertCell().textContent = timeString;
@@ -326,9 +326,9 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         if (cellObj.isBreak) {
-            cell.textContent = BREAK_TEXT;
+            cell.textContent = AppConfig.schedule.breakText;
             cell.classList.add('break-cell');
-            cell.style.backgroundColor = DEFAULT_CELL_COLOR;
+            cell.style.backgroundColor = AppConfig.schedule.defaultCellColor;
         } else if (cellObj.isSplit) {
             const createPart = (content, isMassage, isPnf) => {
                 const div = document.createElement('div');
@@ -346,7 +346,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 return div;
             };
             cell.classList.add('split-cell');
-            cell.style.backgroundColor = CONTENT_CELL_COLOR;
+            cell.style.backgroundColor = AppConfig.schedule.contentCellColor;
             cell.appendChild(createPart(cellObj.content1, cellObj.isMassage1, cellObj.isPnf1));
             cell.appendChild(createPart(cellObj.content2, cellObj.isMassage2, cellObj.isPnf2));
         } else {
@@ -360,7 +360,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 cell.dataset.isPnf = 'true';
             }
             cell.innerHTML = htmlContent;
-            cell.style.backgroundColor = (getElementText(cell).trim() !== '') ? CONTENT_CELL_COLOR : DEFAULT_CELL_COLOR;
+            cell.style.backgroundColor = (getElementText(cell).trim() !== '') ? AppConfig.schedule.contentCellColor : AppConfig.schedule.defaultCellColor;
         }
 
         // Dodanie znacznika końca zabiegów
@@ -374,7 +374,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     const loadSchedule = async () => {
         try {
-            const docRef = db.collection("schedules").doc("mainSchedule");
+            const docRef = db.collection(AppConfig.firestore.collections.schedules).doc(AppConfig.firestore.docs.mainSchedule);
             const doc = await docRef.get();
 
             if (doc.exists) {
@@ -384,21 +384,19 @@ document.addEventListener('DOMContentLoaded', () => {
                 console.log("No schedule found, creating a new one.");
             }
         } catch (error) {
-            console.error('Error loading data from Firestore:', error);
-            window.showToast('Błąd ładowania grafiku z Firestore', 5000);
+            console.error('Error loading schedule from Firestore:', error);
+            window.showToast('Błąd podczas ładowania grafiku. Spróbuj ponownie.', 5000);
         }
         renderTable();
     };
 
     const saveSchedule = async () => {
-        console.log("Attempting to save schedule...");
         try {
-            await db.collection("schedules").doc("mainSchedule").set(appState, { merge: true });
-            console.log("Schedule successfully written to Firestore.");
-            window.showToast('Zapisano w Firestore!', 2000);
+            await db.collection(AppConfig.firestore.collections.schedules).doc(AppConfig.firestore.docs.mainSchedule).set(appState, { merge: true });
+            window.showToast('Grafik zapisany pomyślnie.', 2000);
         } catch (error) {
-            console.error('Error saving data to Firestore:', error);
-            window.showToast('Błąd zapisu do Firestore!', 5000);
+            console.error('Error saving schedule to Firestore:', error);
+            window.showToast('Wystąpił błąd podczas zapisu grafiku. Spróbuj ponownie.', 5000);
         }
     };
 
@@ -407,7 +405,7 @@ document.addEventListener('DOMContentLoaded', () => {
             return { content: getElementText(cell) };
         }
         if (cell.classList.contains('break-cell')) {
-            return { content: BREAK_TEXT, isBreak: true };
+            return { content: AppConfig.schedule.breakText, isBreak: true };
         }
         if (cell.classList.contains('split-cell')) {
             const part1 = cell.children[0];
@@ -775,7 +773,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
         } catch (error) {
             console.error("Błąd inicjalizacji strony harmonogramu:", error);
-            window.showToast("Nie udało się załadować danych.", 5000);
+            window.showToast("Wystąpił krytyczny błąd inicjalizacji. Odśwież stronę.", 5000);
         } finally {
             hideLoadingOverlay(loadingOverlay);
         }

@@ -1,9 +1,4 @@
 const LeavesCareSummary = (() => {
-    // Definicje stałych limitów dni opieki
-    const CHILD_CARE_LIMIT = 2;       // art. 188 kp - opieka nad zdrowym dzieckiem do 14 r.ż. (dni)
-    const SICK_CHILD_CARE_LIMIT = 60; // Zasiłek opiekuńczy na chore dziecko (dni w roku)
-    const FAMILY_CARE_LIMIT = 14;     // Zasiłek opiekuńczy na innego chorego członka rodziny (dni w roku)
-
     // Funkcja pomocnicza do zliczania dni roboczych (pon-pt)
     const countWorkdays = (startDate, endDate) => {
         let count = 0;
@@ -70,9 +65,9 @@ const LeavesCareSummary = (() => {
             const row = document.createElement('tr');
             row.innerHTML = `
                 <td>${employeeName}</td>
-                <td>${usedArt188Days} / ${CHILD_CARE_LIMIT} dni</td>
-                <td>${usedSickChildDays} / ${SICK_CHILD_CARE_LIMIT} dni</td>
-                <td>${usedFamilyMemberDays} / ${FAMILY_CARE_LIMIT} dni</td>
+                <td>${usedArt188Days} / ${AppConfig.leaves.careLimits.child_care_art_188} dni</td>
+                <td>${usedSickChildDays} / ${AppConfig.leaves.careLimits.sick_child_care} dni</td>
+                <td>${usedFamilyMemberDays} / ${AppConfig.leaves.careLimits.family_member_care} dni</td>
                 <td><strong>${totalUsed} dni</strong></td>
             `;
             tbody.appendChild(row);

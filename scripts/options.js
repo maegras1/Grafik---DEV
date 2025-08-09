@@ -118,7 +118,7 @@ document.addEventListener('DOMContentLoaded', () => {
             window.showToast("Pracownik dodany pomyślnie!", 2000);
         } catch (error) {
             console.error("Błąd podczas dodawania pracownika:", error);
-            window.showToast("Wystąpił błąd przy dodawaniu.", 5000);
+            window.showToast("Wystąpił błąd podczas dodawania pracownika. Spróbuj ponownie.", 5000);
         } finally {
             showLoading(false);
         }
@@ -136,11 +136,11 @@ document.addEventListener('DOMContentLoaded', () => {
         const newCarriedOver = parseInt(carriedOverLeaveInput.value, 10);
 
         if (newName === '') {
-            window.showToast("Nazwa nie może być pusta.", 3000);
+            window.showToast("Nazwa pracownika nie może być pusta.", 3000);
             return;
         }
         if (isNaN(newEntitlement) || isNaN(newCarriedOver)) {
-            window.showToast("Wartości urlopu muszą być liczbami.", 3000);
+            window.showToast("Wartości urlopu muszą być poprawnymi liczbami.", 3000);
             return;
         }
 
@@ -179,8 +179,8 @@ document.addEventListener('DOMContentLoaded', () => {
             window.showToast("Dane pracownika zaktualizowane.", 2000);
 
         } catch (error) {
-            console.error("Błąd podczas zapisywania zmian:", error);
-            window.showToast("Wystąpił błąd przy zapisie.", 5000);
+            console.error("Błąd podczas zapisywania zmian pracownika:", error);
+            window.showToast("Wystąpił błąd podczas zapisu. Spróbuj ponownie.", 5000);
         } finally {
             showLoading(false);
         }
@@ -246,7 +246,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
         } catch (error) {
             console.error("Błąd podczas usuwania pracownika:", error);
-            window.showToast("Wystąpił błąd podczas usuwania.", 5000);
+            window.showToast("Wystąpił błąd podczas usuwania pracownika. Spróbuj ponownie.", 5000);
         } finally {
             showLoading(false);
         }
@@ -261,7 +261,7 @@ document.addEventListener('DOMContentLoaded', () => {
             renderEmployeeList();
         } catch (error) {
             console.error("Błąd inicjalizacji strony opcji:", error);
-            window.showToast("Nie udało się załadować danych.", 5000);
+            window.showToast("Wystąpił krytyczny błąd inicjalizacji. Odśwież stronę.", 5000);
         } finally {
             showLoading(false);
         }
