@@ -71,15 +71,17 @@ document.addEventListener('DOMContentLoaded', () => {
 
             const employeeName = targetCell.closest('tr').dataset.employee;
             const monthIndex = parseInt(targetCell.dataset.month, 10);
-            const allLeaves = await getAllLeavesData();
-            const existingLeaves = allLeaves[employeeName] || [];
-
+            
             try {
+                const allLeaves = await getAllLeavesData();
+                const existingLeaves = allLeaves[employeeName] || [];
                 const updatedLeaves = await CalendarModal.open(employeeName, existingLeaves, monthIndex);
+                
                 await saveLeavesData(employeeName, updatedLeaves);
                 renderSingleEmployeeLeaves(employeeName, updatedLeaves);
             } catch (error) {
-                console.log("Operacja w kalendarzu anulowana.", error);
+                console.log("Operacja w kalendarzu została anulowana.", error);
+                window.showToast("Anulowano zmiany.", 2000);
             }
         });
 

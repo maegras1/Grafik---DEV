@@ -3,29 +3,6 @@
 const LeavesSummary = (() => {
 
     /**
-     * Zlicza dni robocze (pon-pt) w danym zakresie dat.
-     * @param {string} startDate - Data początkowa w formacie YYYY-MM-DD.
-     * @param {string} endDate - Data końcowa w formacie YYYY-MM-DD.
-     * @returns {number} Liczba dni roboczych.
-     */
-    const countWorkdays = (startDate, endDate) => {
-        let count = 0;
-        const start = new Date(startDate + 'T00:00:00Z');
-        const end = new Date(endDate + 'T00:00:00Z');
-
-        let current = new Date(start);
-
-        while (current <= end) {
-            const day = current.getUTCDay(); // 0 = Niedziela, 1 = Poniedziałek, ..., 6 = Sobota
-            if (day !== 0 && day !== 6) {
-                count++;
-            }
-            current.setUTCDate(current.getUTCDate() + 1);
-        }
-        return count;
-    };
-
-    /**
      * Zwraca kolor tła w zależności od liczby pozostałych dni urlopu.
      * @param {number} days - Liczba pozostałych dni.
      * @returns {string} Kolor tła w formacie hex.

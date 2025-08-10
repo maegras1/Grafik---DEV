@@ -1,21 +1,4 @@
 const LeavesCareSummary = (() => {
-    // Funkcja pomocnicza do zliczania dni roboczych (pon-pt)
-    const countWorkdays = (startDate, endDate) => {
-        let count = 0;
-        const start = new Date(startDate + 'T00:00:00Z');
-        const end = new Date(endDate + 'T00:00:00Z');
-        
-        let current = new Date(start);
-        while (current <= end) {
-            const day = current.getUTCDay();
-            if (day !== 0 && day !== 6) { // 0 = Niedziela, 6 = Sobota
-                count++;
-            }
-            current.setUTCDate(current.getUTCDate() + 1);
-        }
-        return count;
-    };
-
     const render = (container, allLeavesData) => {
         container.innerHTML = ''; // Wyczyść kontener
 

@@ -1,7 +1,7 @@
 // scripts/schedule-events.js
 
 const ScheduleEvents = (() => {
-    let appState, undoManager, mainController;
+    let _dependencies = {};
     
     const mainTable = document.getElementById('mainScheduleTable');
     const searchInput = document.getElementById('searchInput');
@@ -25,7 +25,7 @@ const ScheduleEvents = (() => {
         const allCells = document.querySelectorAll('td.editable-cell');
         const matchingCells = [];
         allCells.forEach(cell => {
-            const cellText = ScheduleUI.getElementText(cell).toLowerCase();
+            const cellText = _dependencies.ui.getElementText(cell).toLowerCase();
             if (cellText.includes(cleanedSearchText)) {
                 matchingCells.push(cell);
             }
@@ -42,7 +42,7 @@ const ScheduleEvents = (() => {
                  activeCell.parentNode.classList.remove('active-cell');
             }
             if (activeCell.getAttribute('contenteditable') === 'true') {
-                mainController.exitEditMode(activeCell);
+                _dependencies.exitEditMode(activeCell);
             }
             clearDuplicateHighlights();
         }
@@ -55,36 +55,34 @@ const ScheduleEvents = (() => {
                 activeCell.parentNode.classList.add('active-cell');
             }
             activeCell.focus();
-            highlightDuplicates(ScheduleUI.getElementText(activeCell));
+            highlightDuplicates(_dependencies.ui.getElementText(activeCell));
         }
     };
 
-    const initialize = (controller) => {
-        mainController = controller;
-        appState = mainController.appState;
-        undoManager = mainController.undoManager;
+    const initialize = (deps) => {
+        _dependencies = deps;
 
         mainTable.addEventListener('click', (event) => {
             const target = event.target.closest('td.editable-cell, div[tabindex="0"]');
             if (target) {
                 if (activeCell === target && target.getAttribute('contenteditable') === 'true') return;
-                if (activeCell && activeCell.getAttribute('contenteditable') === 'true') mainController.exitEditMode(activeCell);
+                if (activeCell && activeCell.getAttribute('contenteditable') === 'true') _dependencies.exitEditMode(activeCell);
                 setActiveCell(target);
             } else {
-                if (activeCell && activeCell.getAttribute('contenteditable') === 'true') mainController.exitEditMode(activeCell);
+                if (activeCell && activeCell.getAttribute('contenteditable') === 'true') _dependencies.exitEditMode(activeCell);
                 setActiveCell(null);
             }
         });
 
         mainTable.addEventListener('dblclick', (event) => {
             const target = event.target.closest('td.editable-cell, div[tabindex="0"]');
-            if (target) mainController.enterEditMode(target);
+            if (target) _dependencies.enterEditMode(target);
         });
 
         document.addEventListener('click', (event) => {
             if (!event.target.closest('.active-cell')) {
                  if (activeCell && activeCell.getAttribute('contenteditable') === 'true') {
-                    mainController.exitEditMode(activeCell);
+                    _dependencies.exitEditMode(activeCell);
                 }
                 setActiveCell(null);
             }
@@ -94,7 +92,7 @@ const ScheduleEvents = (() => {
             const target = event.target.closest('td.editable-cell');
             if (target && !target.classList.contains('break-cell')) {
                 draggedCell = target;
-                event.dataTransfer.setData('application/json', JSON.stringify(mainController.getCurrentTableStateForCell(target)));
+                event.dataTransfer.setData('application/json', JSON.stringify(_dependencies.getCurrentTableStateForCell(target)));
                 event.dataTransfer.effectAllowed = 'move';
                 draggedCell.classList.add('is-dragging');
             } else {
@@ -124,24 +122,24 @@ const ScheduleEvents = (() => {
             document.querySelectorAll('.drag-over-target').forEach(el => el.classList.remove('drag-over-target'));
             
             if (dropTargetCell && !dropTargetCell.classList.contains('break-cell') && draggedCell && draggedCell !== dropTargetCell) {
-                undoManager.pushState(mainController.getCurrentTableState());
+                _dependencies.undoManager.pushState(_dependencies.getCurrentTableState());
 
                 const sourceTime = draggedCell.dataset.time;
                 const sourceIndex = draggedCell.dataset.employeeIndex;
                 const targetTime = dropTargetCell.dataset.time;
                 const targetIndex = dropTargetCell.dataset.employeeIndex;
 
-                const sourceData = appState.scheduleCells[sourceTime]?.[sourceIndex] || {};
-                const targetData = appState.scheduleCells[targetTime]?.[targetIndex] || {};
+                const sourceData = _dependencies.appState.scheduleCells[sourceTime]?.[sourceIndex] || {};
+                const targetData = _dependencies.appState.scheduleCells[targetTime]?.[targetIndex] || {};
 
-                if (!appState.scheduleCells[sourceTime]) appState.scheduleCells[sourceTime] = {};
-                appState.scheduleCells[sourceTime][sourceIndex] = targetData;
+                if (!_dependencies.appState.scheduleCells[sourceTime]) _dependencies.appState.scheduleCells[sourceTime] = {};
+                _dependencies.appState.scheduleCells[sourceTime][sourceIndex] = targetData;
                 
-                if (!appState.scheduleCells[targetTime]) appState.scheduleCells[targetTime] = {};
-                appState.scheduleCells[targetTime][targetIndex] = sourceData;
+                if (!_dependencies.appState.scheduleCells[targetTime]) _dependencies.appState.scheduleCells[targetTime] = {};
+                _dependencies.appState.scheduleCells[targetTime][targetIndex] = sourceData;
 
-                mainController.renderAndSave();
-                undoManager.pushState(mainController.getCurrentTableState());
+                _dependencies.renderAndSave();
+                _dependencies.undoManager.pushState(_dependencies.getCurrentTableState());
             }
         });
 
@@ -154,7 +152,7 @@ const ScheduleEvents = (() => {
         document.addEventListener('keydown', (event) => {
              if ((event.ctrlKey || event.metaKey) && event.key === 'z') {
                 event.preventDefault();
-                mainController.undoLastAction();
+                _dependencies.undoLastAction();
                 return;
             }
 
@@ -162,10 +160,10 @@ const ScheduleEvents = (() => {
             const isEditing = target.getAttribute('contenteditable') === 'true';
 
             if(isEditing) {
-                if (event.key === 'Escape') mainController.exitEditMode(target);
+                if (event.key === 'Escape') _dependencies.exitEditMode(target);
                 if (event.key === 'Enter') {
                      event.preventDefault();
-                     mainController.exitEditMode(target);
+                     _dependencies.exitEditMode(target);
                      const parentCell = target.closest('td');
                      if (parentCell) {
                          const nextRow = parentCell.closest('tr').nextElementSibling;
@@ -184,7 +182,7 @@ const ScheduleEvents = (() => {
                 event.preventDefault();
                 const cellToClear = activeCell.closest('td.editable-cell');
                 if (cellToClear) {
-                    mainController.updateCellState(cellToClear, state => {
+                    _dependencies.updateCellState(cellToClear, state => {
                         Object.keys(state).forEach(key => delete state[key]);
                         window.showToast('Wyczyszczono komórkę');
                     });
@@ -194,13 +192,13 @@ const ScheduleEvents = (() => {
 
             if (event.key === 'Enter') {
                 event.preventDefault();
-                mainController.enterEditMode(activeCell);
+                _dependencies.enterEditMode(activeCell);
                 return;
             }
             
             if (event.key.length === 1 && !event.ctrlKey && !event.altKey && !event.metaKey) {
                 event.preventDefault();
-                mainController.enterEditMode(activeCell, true, event.key);
+                _dependencies.enterEditMode(activeCell, true, event.key);
                 return;
             }
 
@@ -264,13 +262,13 @@ const ScheduleEvents = (() => {
         });
 
         const contextMenuItems = [
-            { id: 'contextPatientInfo', class: 'info', condition: cell => !cell.classList.contains('break-cell') && ScheduleUI.getElementText(cell).trim() !== '', action: cell => mainController.openPatientInfoModal(cell) },
-            { id: 'contextAddBreak', action: cell => mainController.updateCellState(cell, state => { state.isBreak = true; window.showToast('Dodano przerwę'); }) },
-            { id: 'contextRemoveBreak', class: 'danger', condition: cell => cell.classList.contains('break-cell'), action: cell => mainController.updateCellState(cell, state => { delete state.isBreak; window.showToast('Usunięto przerwę'); }) },
-            { id: 'contextClear', class: 'danger', action: cell => mainController.updateCellState(cell, state => { Object.keys(state).forEach(key => delete state[key]); window.showToast('Wyczyszczono komórkę'); }) },
-            { id: 'contextSplitCell', action: cell => mainController.updateCellState(cell, state => { state.content1 = state.content || ''; state.content2 = ''; delete state.content; state.isSplit = true; window.showToast('Podzielono komórkę'); }) },
-            { id: 'contextMassage', action: cell => mainController.toggleSpecialStyle(cell, 'isMassage') },
-            { id: 'contextPnf', action: cell => mainController.toggleSpecialStyle(cell, 'isPnf') }
+            { id: 'contextPatientInfo', class: 'info', condition: cell => !cell.classList.contains('break-cell') && _dependencies.ui.getElementText(cell).trim() !== '', action: cell => _dependencies.openPatientInfoModal(cell) },
+            { id: 'contextAddBreak', action: cell => _dependencies.updateCellState(cell, state => { state.isBreak = true; window.showToast('Dodano przerwę'); }) },
+            { id: 'contextRemoveBreak', class: 'danger', condition: cell => cell.classList.contains('break-cell'), action: cell => _dependencies.updateCellState(cell, state => { delete state.isBreak; window.showToast('Usunięto przerwę'); }) },
+            { id: 'contextClear', class: 'danger', action: cell => _dependencies.updateCellState(cell, state => { Object.keys(state).forEach(key => delete state[key]); window.showToast('Wyczyszczono komórkę'); }) },
+            { id: 'contextSplitCell', action: cell => _dependencies.updateCellState(cell, state => { state.content1 = state.content || ''; state.content2 = ''; delete state.content; state.isSplit = true; window.showToast('Podzielono komórkę'); }) },
+            { id: 'contextMassage', action: cell => _dependencies.toggleSpecialStyle(cell, 'isMassage') },
+            { id: 'contextPnf', action: cell => _dependencies.toggleSpecialStyle(cell, 'isPnf') }
         ];
         window.initializeContextMenu('contextMenu', 'td.editable-cell', contextMenuItems);
     };

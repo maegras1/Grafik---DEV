@@ -13,88 +13,173 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 
-    const mainController = {
-        appState,
-        undoManager,
-
-        async loadSchedule() {
-            try {
-                const docRef = db.collection(AppConfig.firestore.collections.schedules).doc(AppConfig.firestore.docs.mainSchedule);
-                const doc = await docRef.get();
-                if (doc.exists) {
-                    const savedData = doc.data();
-                    appState.scheduleCells = savedData.scheduleCells || {};
-                } else {
-                    console.log("No schedule found, creating a new one.");
-                }
-            } catch (error) {
-                console.error('Error loading schedule from Firestore:', error);
-                window.showToast('Błąd podczas ładowania grafiku. Spróbuj ponownie.', 5000);
+    const loadSchedule = async () => {
+        try {
+            const docRef = db.collection(AppConfig.firestore.collections.schedules).doc(AppConfig.firestore.docs.mainSchedule);
+            const doc = await docRef.get();
+            if (doc.exists) {
+                const savedData = doc.data();
+                appState.scheduleCells = savedData.scheduleCells || {};
+            } else {
+                console.log("No schedule found, creating a new one.");
             }
-            ScheduleUI.renderTable(appState.scheduleCells);
-        },
+        } catch (error) {
+            console.error('Error loading schedule from Firestore:', error);
+            window.showToast('Błąd podczas ładowania grafiku. Spróbuj ponownie.', 5000);
+        }
+    };
 
-        async saveSchedule() {
-            try {
-                await db.collection(AppConfig.firestore.collections.schedules).doc(AppConfig.firestore.docs.mainSchedule).set(appState, { merge: true });
-                window.showToast('Grafik zapisany pomyślnie.', 2000);
-            } catch (error) {
-                console.error('Error saving schedule to Firestore:', error);
-                window.showToast('Wystąpił błąd podczas zapisu grafiku. Spróbuj ponownie.', 5000);
-            }
-        },
+    const saveSchedule = async () => {
+        try {
+            await db.collection(AppConfig.firestore.collections.schedules).doc(AppConfig.firestore.docs.mainSchedule).set(appState, { merge: true });
+            window.showToast('Grafik zapisany pomyślnie.', 2000);
+        } catch (error) {
+            console.error('Error saving schedule to Firestore:', error);
+            window.showToast('Wystąpił błąd podczas zapisu grafiku. Spróbuj ponownie.', 5000);
+        }
+    };
 
-        renderAndSave() {
-            ScheduleUI.renderTable(appState.scheduleCells);
-            this.saveSchedule();
-        },
+    const renderAndSave = () => {
+        ScheduleUI.render();
+        saveSchedule();
+    };
 
-        updateCellState(cell, updateFn) {
-            if (!cell) return;
-            undoManager.pushState(this.getCurrentTableState());
-            const time = cell.dataset.time;
-            const employeeIndex = cell.dataset.employeeIndex;
-            if (!appState.scheduleCells[time]) appState.scheduleCells[time] = {};
-            let cellState = appState.scheduleCells[time][employeeIndex] || {};
-            
-            updateFn(cellState);
-
-            appState.scheduleCells[time][employeeIndex] = cellState;
-            
-            this.renderAndSave();
-            undoManager.pushState(this.getCurrentTableState());
-        },
-
-        toggleSpecialStyle(cell, dataAttribute) {
-            this.updateCellState(cell, state => {
-                state[dataAttribute] = !state[dataAttribute];
-                 if (state.isSplit) {
-                    state[`${dataAttribute}1`] = state[dataAttribute];
-                    state[`${dataAttribute}2`] = state[dataAttribute];
-                }
-                window.showToast('Zmieniono styl');
-            });
-        },
-
-        getCurrentTableState: () => JSON.parse(JSON.stringify(appState)),
+    const updateCellState = (cell, updateFn) => {
+        if (!cell) return;
+        undoManager.pushState(getCurrentTableState());
+        const time = cell.dataset.time;
+        const employeeIndex = cell.dataset.employeeIndex;
+        if (!appState.scheduleCells[time]) appState.scheduleCells[time] = {};
+        let cellState = appState.scheduleCells[time][employeeIndex] || {};
         
-        undoLastAction() {
-            const prevState = undoManager.undo();
-            if (prevState) {
-                appState.scheduleCells = prevState.scheduleCells;
-                this.renderAndSave();
+        updateFn(cellState);
+
+        appState.scheduleCells[time][employeeIndex] = cellState;
+        
+        renderAndSave();
+        undoManager.pushState(getCurrentTableState());
+    };
+    
+    const getCurrentTableState = () => JSON.parse(JSON.stringify(appState));
+
+    const init = async () => {
+        loadingOverlay.style.display = 'flex';
+        try {
+            await EmployeeManager.load();
+            await loadSchedule();
+            
+            ScheduleUI.initialize(appState);
+            ScheduleEvents.initialize({
+                appState: appState,
+                undoManager: undoManager,
+                ui: ScheduleUI,
+                updateCellState: updateCellState,
+                renderAndSave: renderAndSave,
+                getCurrentTableState: getCurrentTableState,
+                // Przekaż wszystkie potrzebne funkcje z oryginalnego pliku z zachowaniem kontekstu
+                exitEditMode: mainController.exitEditMode.bind(mainController),
+                enterEditMode: mainController.enterEditMode.bind(mainController),
+                getCurrentTableStateForCell: mainController.getCurrentTableStateForCell.bind(mainController),
+                openPatientInfoModal: mainController.openPatientInfoModal.bind(mainController),
+                toggleSpecialStyle: mainController.toggleSpecialStyle.bind(mainController),
+                undoLastAction: mainController.undoLastAction.bind(mainController)
+            });
+
+            ScheduleUI.render();
+            undoManager.initialize(getCurrentTableState());
+
+        } catch (error) {
+            console.error("Błąd inicjalizacji strony harmonogramu:", error);
+            window.showToast("Wystąpił krytyczny błąd inicjalizacji. Odśwież stronę.", 5000);
+        } finally {
+            hideLoadingOverlay(loadingOverlay);
+        }
+    };
+
+    // Obiekt kontrolera, aby zachować metody, które są przekazywane
+    const mainController = {
+        exitEditMode(element) {
+            if (!element || element.getAttribute('contenteditable') !== 'true') return;
+            const newText = capitalizeFirstLetter(element.textContent.trim());
+            element.setAttribute('contenteditable', 'false');
+            const parentCell = element.closest('td');
+            if (!parentCell) return;
+            const employeeIndex = parentCell.dataset.employeeIndex;
+            const time = parentCell.dataset.time;
+            const duplicate = this.findDuplicateEntry(newText, time, employeeIndex);
+            const updateSchedule = (isMove = false) => {
+                if (isMove && duplicate) {
+                    const oldCellState = appState.scheduleCells[duplicate.time][duplicate.employeeIndex];
+                    if (oldCellState.content?.toLowerCase() === newText.toLowerCase()) delete oldCellState.content;
+                    if (oldCellState.content1?.toLowerCase() === newText.toLowerCase()) delete oldCellState.content1;
+                    if (oldCellState.content2?.toLowerCase() === newText.toLowerCase()) delete oldCellState.content2;
+                    if (oldCellState.isSplit && !oldCellState.content1 && !oldCellState.content2) delete oldCellState.isSplit;
+                }
+                if (!appState.scheduleCells[time]) appState.scheduleCells[time] = {};
+                if (!appState.scheduleCells[time][employeeIndex]) appState.scheduleCells[time][employeeIndex] = {};
+                let cellState = appState.scheduleCells[time][employeeIndex];
+                if (newText.includes('/')) {
+                    const parts = newText.split('/', 2);
+                    cellState = { isSplit: true, content1: parts[0], content2: parts[1] };
+                } else if (cellState.isSplit) {
+                    const isFirstDiv = element === parentCell.querySelector('div:first-child');
+                    if (isFirstDiv) cellState.content1 = newText;
+                    else cellState.content2 = newText;
+                    if (!cellState.content1 && !cellState.content2) cellState = {};
+                } else {
+                    cellState = { content: newText };
+                }
+                appState.scheduleCells[time][employeeIndex] = cellState;
+                renderAndSave();
+                undoManager.pushState(getCurrentTableState());
+            };
+            if (duplicate) {
+                this.showDuplicateConfirmationDialog(duplicate, () => updateSchedule(true), () => updateSchedule(false), () => { ScheduleUI.render(); });
+            } else {
+                updateSchedule(false);
             }
         },
-
+        enterEditMode(element, clearContent = false, initialChar = '') {
+            if (!element || element.classList.contains('break-cell') || element.getAttribute('contenteditable') === 'true') return;
+            if (element.tagName === 'TD' && element.classList.contains('split-cell')) {
+                const firstDiv = element.querySelector('div');
+                if (firstDiv) {
+                    this.enterEditMode(firstDiv, clearContent, initialChar);
+                }
+                return;
+            }
+            const isEditableTarget = (element.tagName === 'TD' && !element.classList.contains('split-cell')) || (element.tagName === 'DIV' && element.parentNode.classList.contains('split-cell'));
+            if (!isEditableTarget) return;
+            undoManager.pushState(getCurrentTableState());
+            const originalValue = ScheduleUI.getElementText(element);
+            element.dataset.originalValue = originalValue;
+            element.innerHTML = ScheduleUI.getElementText(element);
+            element.setAttribute('contenteditable', 'true');
+            element.classList.remove('massage-text', 'pnf-text');
+            delete element.dataset.isMassage;
+            delete element.dataset.isPnf;
+            if (clearContent) {
+                element.textContent = initialChar;
+            } else if (initialChar) {
+                element.textContent += initialChar;
+            }
+            element.focus();
+            const range = document.createRange();
+            const sel = window.getSelection();
+            range.selectNodeContents(element);
+            range.collapse(false);
+            sel.removeAllRanges();
+            sel.addRange(range);
+        },
         findDuplicateEntry(text, currentTime, currentEmployeeIndex) {
             if (!text) return null;
             const lowerCaseText = text.toLowerCase();
-            for (const time in this.appState.scheduleCells) {
-                for (const employeeIndex in this.appState.scheduleCells[time]) {
+            for (const time in appState.scheduleCells) {
+                for (const employeeIndex in appState.scheduleCells[time]) {
                     if (time === currentTime && employeeIndex === currentEmployeeIndex) {
                         continue;
                     }
-                    const cellData = this.appState.scheduleCells[time][employeeIndex];
+                    const cellData = appState.scheduleCells[time][employeeIndex];
                     if (cellData.content?.toLowerCase() === lowerCaseText ||
                         cellData.content1?.toLowerCase() === lowerCaseText ||
                         cellData.content2?.toLowerCase() === lowerCaseText) {
@@ -104,7 +189,6 @@ document.addEventListener('DOMContentLoaded', () => {
             }
             return null;
         },
-
         showDuplicateConfirmationDialog(duplicateInfo, onMove, onAdd, onCancel) {
             const modal = document.getElementById('duplicateModal');
             const modalText = document.getElementById('duplicateModalText');
@@ -127,82 +211,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 if (onCancel) onCancel();
             };
         },
-
-        exitEditMode(element) {
-            if (!element || element.getAttribute('contenteditable') !== 'true') return;
-            const newText = capitalizeFirstLetter(element.textContent.trim());
-            element.setAttribute('contenteditable', 'false');
-            const parentCell = element.closest('td');
-            if (!parentCell) return;
-            const employeeIndex = parentCell.dataset.employeeIndex;
-            const time = parentCell.dataset.time;
-            const duplicate = this.findDuplicateEntry(newText, time, employeeIndex);
-            const updateSchedule = (isMove = false) => {
-                if (isMove && duplicate) {
-                    const oldCellState = this.appState.scheduleCells[duplicate.time][duplicate.employeeIndex];
-                    if (oldCellState.content?.toLowerCase() === newText.toLowerCase()) delete oldCellState.content;
-                    if (oldCellState.content1?.toLowerCase() === newText.toLowerCase()) delete oldCellState.content1;
-                    if (oldCellState.content2?.toLowerCase() === newText.toLowerCase()) delete oldCellState.content2;
-                    if (oldCellState.isSplit && !oldCellState.content1 && !oldCellState.content2) delete oldCellState.isSplit;
-                }
-                if (!this.appState.scheduleCells[time]) this.appState.scheduleCells[time] = {};
-                if (!this.appState.scheduleCells[time][employeeIndex]) this.appState.scheduleCells[time][employeeIndex] = {};
-                let cellState = this.appState.scheduleCells[time][employeeIndex];
-                if (newText.includes('/')) {
-                    const parts = newText.split('/', 2);
-                    cellState = { isSplit: true, content1: parts[0], content2: parts[1] };
-                } else if (cellState.isSplit) {
-                    const isFirstDiv = element === parentCell.querySelector('div:first-child');
-                    if (isFirstDiv) cellState.content1 = newText;
-                    else cellState.content2 = newText;
-                    if (!cellState.content1 && !cellState.content2) cellState = {};
-                } else {
-                    cellState = { content: newText };
-                }
-                this.appState.scheduleCells[time][employeeIndex] = cellState;
-                this.renderAndSave();
-                this.undoManager.pushState(this.getCurrentTableState());
-            };
-            if (duplicate) {
-                this.showDuplicateConfirmationDialog(duplicate, () => updateSchedule(true), () => updateSchedule(false), () => { ScheduleUI.renderTable(this.appState.scheduleCells); });
-            } else {
-                updateSchedule(false);
-            }
-        },
-
-        enterEditMode(element, clearContent = false, initialChar = '') {
-            if (!element || element.classList.contains('break-cell') || element.getAttribute('contenteditable') === 'true') return;
-            if (element.tagName === 'TD' && element.classList.contains('split-cell')) {
-                const firstDiv = element.querySelector('div');
-                if (firstDiv) {
-                    this.enterEditMode(firstDiv, clearContent, initialChar);
-                }
-                return;
-            }
-            const isEditableTarget = (element.tagName === 'TD' && !element.classList.contains('split-cell')) || (element.tagName === 'DIV' && element.parentNode.classList.contains('split-cell'));
-            if (!isEditableTarget) return;
-            this.undoManager.pushState(this.getCurrentTableState());
-            const originalValue = ScheduleUI.getElementText(element);
-            element.dataset.originalValue = originalValue;
-            element.innerHTML = ScheduleUI.getElementText(element);
-            element.setAttribute('contenteditable', 'true');
-            element.classList.remove('massage-text', 'pnf-text');
-            delete element.dataset.isMassage;
-            delete element.dataset.isPnf;
-            if (clearContent) {
-                element.textContent = initialChar;
-            } else if (initialChar) {
-                element.textContent += initialChar;
-            }
-            element.focus();
-            const range = document.createRange();
-            const sel = window.getSelection();
-            range.selectNodeContents(element);
-            range.collapse(false);
-            sel.removeAllRanges();
-            sel.addRange(range);
-        },
-
         getCurrentTableStateForCell(cell) {
             if (cell.tagName === 'TH') {
                 return { content: ScheduleUI.getElementText(cell) };
@@ -229,7 +237,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 isPnf: cell.dataset.isPnf === 'true'
             };
         },
-
         openPatientInfoModal(cell) {
             const patientName = ScheduleUI.getElementText(cell);
             if (!patientName) {
@@ -245,7 +252,7 @@ document.addEventListener('DOMContentLoaded', () => {
             const closeModalBtn = document.getElementById('closePatientInfoModal');
             const time = cell.dataset.time;
             const employeeIndex = cell.dataset.employeeIndex;
-            const cellState = this.appState.scheduleCells[time]?.[employeeIndex] || {};
+            const cellState = appState.scheduleCells[time]?.[employeeIndex] || {};
             patientNameInput.value = patientName;
             startDateInput.value = cellState.treatmentStartDate || new Date().toISOString().split('T')[0];
             extensionDaysInput.value = cellState.treatmentExtensionDays || 0;
@@ -274,7 +281,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 modal.style.display = 'none';
             };
             saveModalBtn.onclick = () => {
-                this.updateCellState(cell, state => {
+                updateCellState(cell, state => {
                     state.treatmentStartDate = startDateInput.value;
                     state.treatmentExtensionDays = parseInt(extensionDaysInput.value, 10);
                     state.treatmentEndDate = endDateInput.value;
@@ -289,21 +296,23 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
             };
             modal.style.display = 'flex';
-        }
-    };
-
-    const init = async () => {
-        loadingOverlay.style.display = 'flex';
-        try {
-            await EmployeeManager.load();
-            await mainController.loadSchedule();
-            undoManager.initialize(mainController.getCurrentTableState());
-            ScheduleEvents.initialize(mainController);
-        } catch (error) {
-            console.error("Błąd inicjalizacji strony harmonogramu:", error);
-            window.showToast("Wystąpił krytyczny błąd inicjalizacji. Odśwież stronę.", 5000);
-        } finally {
-            hideLoadingOverlay(loadingOverlay);
+        },
+        toggleSpecialStyle(cell, dataAttribute) {
+            updateCellState(cell, state => {
+                state[dataAttribute] = !state[dataAttribute];
+                 if (state.isSplit) {
+                    state[`${dataAttribute}1`] = state[dataAttribute];
+                    state[`${dataAttribute}2`] = state[dataAttribute];
+                }
+                window.showToast('Zmieniono styl');
+            });
+        },
+        undoLastAction() {
+            const prevState = undoManager.undo();
+            if (prevState) {
+                appState.scheduleCells = prevState.scheduleCells;
+                renderAndSave();
+            }
         }
     };
 

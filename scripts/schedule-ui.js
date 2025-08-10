@@ -1,8 +1,14 @@
 // scripts/schedule-ui.js
 
 const ScheduleUI = (() => {
+    let _appState = null;
+
     const tableHeaderRow = document.getElementById('tableHeaderRow');
     const tbody = document.getElementById('mainScheduleTable').querySelector('tbody');
+
+    const initialize = (appState) => {
+        _appState = appState;
+    };
 
     const getElementText = (element) => {
         if (!element || element.classList.contains('break-cell')) return '';
@@ -76,21 +82,13 @@ const ScheduleUI = (() => {
         }
     };
 
-    const refreshRowHeight = (cell) => {
-        if (!cell) return;
-        const parentRow = cell.closest('tr');
-        if (parentRow) {
-            parentRow.style.height = 'auto';
-        }
-    };
-
     const refreshAllRowHeights = () => {
         document.querySelectorAll('#mainScheduleTable tbody tr').forEach(row => {
             row.style.height = 'auto';
         });
     };
 
-    const renderTable = (scheduleCells) => {
+    const renderTable = () => {
         const employees = EmployeeManager.getAll();
         tableHeaderRow.innerHTML = '<th>Godz.</th>';
         const employeeIndices = Object.keys(employees).sort((a, b) => parseInt(a) - parseInt(b));
@@ -114,7 +112,7 @@ const ScheduleUI = (() => {
                 
                 for (const i of employeeIndices) {
                     const cell = tr.insertCell();
-                    const cellData = scheduleCells[timeString]?.[i] || {};
+                    const cellData = _appState.scheduleCells[timeString]?.[i] || {};
                     applyCellDataToDom(cell, cellData);
                     cell.setAttribute('data-time', timeString);
                     cell.setAttribute('data-employee-index', i);
@@ -127,7 +125,8 @@ const ScheduleUI = (() => {
     };
 
     return {
-        renderTable,
+        initialize,
+        render: renderTable,
         getElementText
     };
 })();
