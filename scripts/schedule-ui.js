@@ -3,9 +3,6 @@
 const ScheduleUI = (() => {
     let _appState = null;
 
-    const tableHeaderRow = document.getElementById('tableHeaderRow');
-    const tbody = document.getElementById('mainScheduleTable').querySelector('tbody');
-
     const initialize = (appState) => {
         _appState = appState;
     };
@@ -74,8 +71,15 @@ const ScheduleUI = (() => {
             cell.style.backgroundColor = (getElementText(cell).trim() !== '') ? AppConfig.schedule.contentCellColor : AppConfig.schedule.defaultCellColor;
         }
 
-        if (cellObj.treatmentEndDate) {
-            const today = new Date().toISOString().split('T')[0];
+        const today = new Date().toISOString().split('T')[0];
+        if (cellObj.isSplit) {
+            if (cellObj.treatmentData1?.endDate && cellObj.treatmentData1.endDate <= today) {
+                cell.children[0]?.classList.add('treatment-end-marker');
+            }
+            if (cellObj.treatmentData2?.endDate && cellObj.treatmentData2.endDate <= today) {
+                cell.children[1]?.classList.add('treatment-end-marker');
+            }
+        } else if (cellObj.treatmentEndDate) {
             if (cellObj.treatmentEndDate <= today) {
                 cell.classList.add('treatment-end-marker');
             }
@@ -89,6 +93,8 @@ const ScheduleUI = (() => {
     };
 
     const renderTable = () => {
+        const tableHeaderRow = document.getElementById('tableHeaderRow');
+        const tbody = document.getElementById('mainScheduleTable').querySelector('tbody');
         const employees = EmployeeManager.getAll();
         tableHeaderRow.innerHTML = '<th>Godz.</th>';
         const employeeIndices = Object.keys(employees).sort((a, b) => parseInt(a) - parseInt(b));

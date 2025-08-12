@@ -57,7 +57,7 @@
 .leaves-table td, .summary-table td {
     padding: 12px 15px;
     border: 1px solid #ddd;
-    text-align: left;
+    text-align: center;
 }
 
 .leaves-table tbody tr:hover, .summary-table tbody tr:hover {

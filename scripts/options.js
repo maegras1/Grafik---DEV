@@ -1,17 +1,8 @@
-document.addEventListener('DOMContentLoaded', () => {
+const Options = (() => {
     // --- SELEKTORY ELEMENTÓW DOM ---
-    const loadingOverlay = document.getElementById('loadingOverlay');
-    const employeeListContainer = document.getElementById('employeeListContainer');
-    const employeeSearchInput = document.getElementById('employeeSearchInput');
-    const addEmployeeBtn = document.getElementById('addEmployeeBtn');
-    
-    const detailsPlaceholder = document.getElementById('detailsPlaceholder');
-    const detailsEditForm = document.getElementById('detailsEditForm');
-    const employeeNameInput = document.getElementById('employeeNameInput');
-    const leaveEntitlementInput = document.getElementById('leaveEntitlementInput');
-    const carriedOverLeaveInput = document.getElementById('carriedOverLeaveInput');
-    const saveEmployeeBtn = document.getElementById('saveEmployeeBtn');
-    const deleteEmployeeBtn = document.getElementById('deleteEmployeeBtn');
+    let loadingOverlay, employeeListContainer, employeeSearchInput, addEmployeeBtn,
+        detailsPlaceholder, detailsEditForm, employeeNameInput, leaveEntitlementInput,
+        carriedOverLeaveInput, saveEmployeeBtn, deleteEmployeeBtn;
 
     // --- ZMIENNE STANU APLIKACJI ---
     let selectedEmployeeIndex = null;
@@ -253,7 +244,20 @@ document.addEventListener('DOMContentLoaded', () => {
     };
 
     // --- INICJALIZACJA I NASŁUCHIWANIE ZDARZEŃ ---
-    const initializePage = async () => {
+    const init = async () => {
+        // Query for elements only when the page is initialized
+        loadingOverlay = document.getElementById('loadingOverlay');
+        employeeListContainer = document.getElementById('employeeListContainer');
+        employeeSearchInput = document.getElementById('employeeSearchInput');
+        addEmployeeBtn = document.getElementById('addEmployeeBtn');
+        detailsPlaceholder = document.getElementById('detailsPlaceholder');
+        detailsEditForm = document.getElementById('detailsEditForm');
+        employeeNameInput = document.getElementById('employeeNameInput');
+        leaveEntitlementInput = document.getElementById('leaveEntitlementInput');
+        carriedOverLeaveInput = document.getElementById('carriedOverLeaveInput');
+        saveEmployeeBtn = document.getElementById('saveEmployeeBtn');
+        deleteEmployeeBtn = document.getElementById('deleteEmployeeBtn');
+
         resetDetailsPanel();
         showLoading(true);
         try {
@@ -266,11 +270,23 @@ document.addEventListener('DOMContentLoaded', () => {
             showLoading(false);
         }
 
+        // Attach event listeners
         employeeSearchInput.addEventListener('input', filterEmployees);
         addEmployeeBtn.addEventListener('click', handleAddEmployee);
         saveEmployeeBtn.addEventListener('click', handleSaveEmployee);
         deleteEmployeeBtn.addEventListener('click', handleDeleteEmployee);
     };
 
-    initializePage();
-});
+    const destroy = () => {
+        employeeSearchInput.removeEventListener('input', filterEmployees);
+        addEmployeeBtn.removeEventListener('click', handleAddEmployee);
+        saveEmployeeBtn.removeEventListener('click', handleSaveEmployee);
+        deleteEmployeeBtn.removeEventListener('click', handleDeleteEmployee);
+        console.log("Options module destroyed");
+    };
+
+    return {
+        init,
+        destroy
+    };
+})();

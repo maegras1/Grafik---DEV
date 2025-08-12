@@ -1,17 +1,8 @@
 // scripts/calendar-modal.js
 const CalendarModal = (() => {
     // --- SELEKTORY I ZMIENNE WEWNĘTRZNE MODUŁU ---
-    const modal = document.getElementById('calendarModal');
-    const prevMonthBtn = document.getElementById('prevMonthBtn');
-    const nextMonthBtn = document.getElementById('nextMonthBtn');
-    const confirmBtn = document.getElementById('confirmSelectionBtn');
-    const cancelBtn = document.getElementById('cancelSelectionBtn');
-    const clearSelectionBtn = document.getElementById('clearSelectionBtn');
-    const startDatePreview = document.getElementById('startDatePreview');
-    const endDatePreview = document.getElementById('endDatePreview');
-    const calendarSlider = document.querySelector('.calendar-slider');
-    const workdaysCounter = document.getElementById('workdaysCounter');
-    const leaveTypeSelect = document.getElementById('leaveTypeSelect');
+    let modal, prevMonthBtn, nextMonthBtn, confirmBtn, cancelBtn, clearSelectionBtn,
+        startDatePreview, endDatePreview, calendarSlider, workdaysCounter, leaveTypeSelect;
 
     let currentEmployee = null;
     let currentYear = new Date().getUTCFullYear();
@@ -293,6 +284,24 @@ const CalendarModal = (() => {
         });
     };
 
+    const init = () => {
+        modal = document.getElementById('calendarModal');
+        prevMonthBtn = document.getElementById('prevMonthBtn');
+        nextMonthBtn = document.getElementById('nextMonthBtn');
+        confirmBtn = document.getElementById('confirmSelectionBtn');
+        cancelBtn = document.getElementById('cancelSelectionBtn');
+        clearSelectionBtn = document.getElementById('clearSelectionBtn');
+        startDatePreview = document.getElementById('startDatePreview');
+        endDatePreview = document.getElementById('endDatePreview');
+        calendarSlider = document.querySelector('.calendar-slider');
+        workdaysCounter = document.getElementById('workdaysCounter');
+        leaveTypeSelect = document.getElementById('leaveTypeSelect');
+        
+        if(modal) { // Only setup listeners if the modal exists on the page
+            setupEventListeners();
+        }
+    };
+
     const open = (employeeName, existingLeaves, monthIndex) => {
         currentEmployee = employeeName;
         // Ustawienie widoku kalendarza na podstawie klikniętego miesiąca
@@ -306,9 +315,8 @@ const CalendarModal = (() => {
         });
     };
 
-    setupEventListeners();
-
     return {
+        init,
         open
     };
 })();
