@@ -22,11 +22,15 @@ const EmployeeManager = (() => {
         }
     };
 
+    let _isLoaded = false; // Flaga do śledzenia stanu załadowania
+
     // Publiczne API modułu
     return {
-        // Inicjalizuje moduł, pobierając dane
+        // Inicjalizuje moduł, pobierając dane (tylko raz)
         load: async function() {
+            if (_isLoaded) return; // Nie ładuj ponownie, jeśli dane już są
             await _fetchFromDB();
+            _isLoaded = true;
         },
         // Zwraca wszystkich pracowników
         getAll: () => _employees,
@@ -38,6 +42,16 @@ const EmployeeManager = (() => {
         getLeaveInfoById: (id) => ({
             entitlement: _employees[id]?.leaveEntitlement || 0,
             carriedOver: _employees[id]?.carriedOverLeave || 0
-        })
+        }),
+        // Zwraca pracownika i jego indeks na podstawie UID
+        getEmployeeByUid: (uid) => {
+            if (!uid) return null;
+            for (const id in _employees) {
+                if (_employees[id].uid === uid) {
+                    return { id, ..._employees[id] };
+                }
+            }
+            return null;
+        }
     };
 })();
