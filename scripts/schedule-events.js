@@ -251,6 +251,7 @@ const ScheduleEvents = (() => {
                 if (newCell) {
                     const focusTarget = newCell.querySelector('div[tabindex="0"]') || newCell;
                     setActiveCell(focusTarget);
+                    focusTarget.focus();
                 } else {
                     setActiveCell(null);
                 }

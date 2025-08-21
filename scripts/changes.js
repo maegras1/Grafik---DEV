@@ -1,5 +1,9 @@
 const Changes = (() => {
     let changesTableBody, changesHeaderRow;
+    let appState = {
+        changesCells: {}
+    };
+    let activeCell = null;
 
     const holidays = [ // Święta w 2025 roku
         '2025-01-01', '2025-01-06', '2025-04-20', '2025-04-21', '2025-05-01', '2025-05-03',
@@ -77,6 +81,13 @@ const Changes = (() => {
             `;
             changesTableBody.appendChild(tr);
         });
+
+        // Make cells editable
+        document.querySelectorAll('#changesTableBody td').forEach(cell => {
+            if (!cell.classList.contains('leaves-cell')) {
+                cell.addEventListener('click', handleCellClick);
+            }
+        });
     };
 
     const getAllLeavesData = async () => {
@@ -116,6 +127,125 @@ const Changes = (() => {
         });
     };
 
+    const handleCellClick = (event) => {
+        const cell = event.target.closest('td');
+        if (!cell) return;
+        activeCell = cell;
+        openEmployeeSelectionModal(cell);
+    };
+
+    const openEmployeeSelectionModal = (cell) => {
+        const modal = document.getElementById('employeeSelectionModal');
+        const employeeListDiv = document.getElementById('employeeList');
+        const saveBtn = document.getElementById('saveEmployeeSelection');
+        const cancelBtn = document.getElementById('cancelEmployeeSelection');
+
+        employeeListDiv.innerHTML = ''; // Clear list
+
+        const allEmployees = EmployeeManager.getAll();
+        const period = cell.parentElement.dataset.startDate;
+        const columnIndex = cell.cellIndex;
+        const cellState = appState.changesCells[period]?.[columnIndex] || {};
+        const assignedEmployees = cellState.assignedEmployees || [];
+
+        for (const id in allEmployees) {
+            const employee = allEmployees[id];
+            const checkbox = document.createElement('input');
+            checkbox.type = 'checkbox';
+            checkbox.id = `emp-ch-${id}`;
+            checkbox.value = id;
+            checkbox.checked = assignedEmployees.includes(id);
+
+            const label = document.createElement('label');
+            label.htmlFor = `emp-ch-${id}`;
+            label.textContent = employee.name;
+
+            const container = document.createElement('div');
+            container.appendChild(checkbox);
+            container.appendChild(label);
+            employeeListDiv.appendChild(container);
+        }
+
+        modal.style.display = 'flex';
+
+        const closeModal = () => {
+            modal.style.display = 'none';
+            saveBtn.onclick = null;
+            cancelBtn.onclick = null;
+        };
+
+        saveBtn.onclick = () => {
+            const selectedEmployees = [];
+            employeeListDiv.querySelectorAll('input[type="checkbox"]:checked').forEach(cb => {
+                selectedEmployees.push(cb.value);
+            });
+
+            updateCellState(cell, state => {
+                state.assignedEmployees = selectedEmployees;
+            });
+            window.showToast("Zapisano zmiany.");
+            closeModal();
+        };
+
+        cancelBtn.onclick = closeModal;
+    };
+
+    const updateCellState = (cell, updateFn) => {
+        if (!cell) return;
+        const period = cell.parentElement.dataset.startDate;
+        const columnIndex = cell.cellIndex;
+        if (!appState.changesCells[period]) appState.changesCells[period] = {};
+        let cellState = appState.changesCells[period][columnIndex] || {};
+        
+        updateFn(cellState);
+
+        appState.changesCells[period][columnIndex] = cellState;
+        
+        renderChangesAndSave();
+    };
+
+    const saveChanges = async () => {
+        try {
+            await db.collection(AppConfig.firestore.collections.schedules).doc('changesSchedule').set(appState, { merge: true });
+            window.setSaveStatus('saved');
+        } catch (error) {
+            console.error('Error saving changes to Firestore:', error);
+            window.setSaveStatus('error');
+        }
+    };
+
+    const loadChanges = async () => {
+        try {
+            const docRef = db.collection(AppConfig.firestore.collections.schedules).doc('changesSchedule');
+            const doc = await docRef.get();
+            if (doc.exists) {
+                const savedData = doc.data();
+                appState.changesCells = savedData.changesCells || {};
+            }
+        } catch (error) {
+            console.error('Error loading changes from Firestore:', error);
+        }
+    };
+
+    const renderChangesContent = () => {
+        document.querySelectorAll('#changesTableBody tr').forEach(row => {
+            const period = row.dataset.startDate;
+            Array.from(row.cells).forEach((cell, index) => {
+                if (appState.changesCells[period]?.[index]?.assignedEmployees) {
+                    const employeeNames = appState.changesCells[period][index].assignedEmployees
+                        .map(id => EmployeeManager.getNameById(id))
+                        .join('<br>');
+                    cell.innerHTML = employeeNames;
+                }
+            });
+        });
+    };
+    
+    const renderChangesAndSave = () => {
+        renderChangesContent();
+        saveChanges();
+    };
+
     const init = async () => {
         changesTableBody = document.getElementById('changesTableBody');
         changesHeaderRow = document.getElementById('changesHeaderRow');
@@ -128,6 +258,10 @@ const Changes = (() => {
         const currentYear = new Date().getUTCFullYear();
         const periods = generateTwoWeekPeriods(currentYear);
         renderTable(periods);
+
+        await EmployeeManager.load();
+        await loadChanges();
+        renderChangesContent();
 
         const allLeaves = await getAllLeavesData();
         populateLeavesColumn(allLeaves);
