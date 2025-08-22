@@ -139,32 +139,47 @@ const Changes = (() => {
         const employeeListDiv = document.getElementById('employeeList');
         const saveBtn = document.getElementById('saveEmployeeSelection');
         const cancelBtn = document.getElementById('cancelEmployeeSelection');
+        const searchInput = document.getElementById('employeeSearchInput');
 
         employeeListDiv.innerHTML = ''; // Clear list
+        searchInput.value = ''; // Clear search input
 
         const allEmployees = EmployeeManager.getAll();
         const period = cell.parentElement.dataset.startDate;
         const columnIndex = cell.cellIndex;
         const cellState = appState.changesCells[period]?.[columnIndex] || {};
-        const assignedEmployees = cellState.assignedEmployees || [];
+        const assignedEmployees = new Set(cellState.assignedEmployees || []);
 
         for (const id in allEmployees) {
             const employee = allEmployees[id];
-            const checkbox = document.createElement('input');
-            checkbox.type = 'checkbox';
-            checkbox.id = `emp-ch-${id}`;
-            checkbox.value = id;
-            checkbox.checked = assignedEmployees.includes(id);
+            const employeeEl = document.createElement('div');
+            employeeEl.classList.add('employee-list-item');
+            employeeEl.textContent = employee.name;
+            employeeEl.dataset.employeeId = id;
 
-            const label = document.createElement('label');
-            label.htmlFor = `emp-ch-${id}`;
-            label.textContent = employee.name;
+            if (assignedEmployees.has(id)) {
+                employeeEl.classList.add('selected-employee');
+            }
 
-            const container = document.createElement('div');
-            container.appendChild(checkbox);
-            container.appendChild(label);
-            employeeListDiv.appendChild(container);
+            employeeEl.addEventListener('click', () => {
+                employeeEl.classList.toggle('selected-employee');
+            });
+
+            employeeListDiv.appendChild(employeeEl);
         }
+
+        const filterEmployees = () => {
+            const searchTerm = searchInput.value.toLowerCase();
+            employeeListDiv.querySelectorAll('.employee-list-item').forEach(item => {
+                if (item.textContent.toLowerCase().includes(searchTerm)) {
+                    item.style.display = '';
+                } else {
+                    item.style.display = 'none';
+                }
+            });
+        };
+
+        searchInput.addEventListener('input', filterEmployees);
 
         modal.style.display = 'flex';
 
@@ -172,12 +187,13 @@ const Changes = (() => {
             modal.style.display = 'none';
             saveBtn.onclick = null;
             cancelBtn.onclick = null;
+            searchInput.removeEventListener('input', filterEmployees);
         };
 
         saveBtn.onclick = () => {
             const selectedEmployees = [];
-            employeeListDiv.querySelectorAll('input[type="checkbox"]:checked').forEach(cb => {
-                selectedEmployees.push(cb.value);
+            employeeListDiv.querySelectorAll('.selected-employee').forEach(el => {
+                selectedEmployees.push(el.dataset.employeeId);
             });
 
             updateCellState(cell, state => {
@@ -246,15 +262,50 @@ const Changes = (() => {
         saveChanges();
     };
 
+    const printChangesTableToPdf = () => {
+        const { jsPDF } = window.jspdf;
+        const doc = new jsPDF({ orientation: 'landscape' });
+
+        doc.autoTable({
+            html: '#changesTable',
+            startY: 20,
+            theme: 'grid',
+            headStyles: {
+                fillColor: [76, 175, 80] // Green header
+            },
+            styles: {
+                font: 'Roboto',
+                fontSize: 10
+            },
+            didDrawPage: function (data) {
+                // Header
+                doc.setFontSize(20);
+                doc.setTextColor(40);
+                doc.text("Grafik Zmian", data.settings.margin.left, 15);
+            }
+        });
+
+        doc.save('grafik-zmian.pdf');
+    };
+
     const init = async () => {
         changesTableBody = document.getElementById('changesTableBody');
         changesHeaderRow = document.getElementById('changesHeaderRow');
+        const printButton = document.getElementById('printChangesTable');
+
+        if(printButton) {
+            printButton.classList.remove('hidden');
+        }
 
         if (!changesTableBody || !changesHeaderRow) {
             console.error("Changes module: Required table elements not found. Aborting initialization.");
             return;
         }
         
+        if(printButton) {
+            printButton.addEventListener('click', printChangesTableToPdf);
+        }
+
         const currentYear = new Date().getUTCFullYear();
         const periods = generateTwoWeekPeriods(currentYear);
         renderTable(periods);
@@ -268,6 +319,11 @@ const Changes = (() => {
     };
 
     const destroy = () => {
+        const printButton = document.getElementById('printChangesTable');
+        if(printButton) {
+            printButton.removeEventListener('click', printChangesTableToPdf);
+            printButton.classList.add('hidden');
+        }
         console.log("Changes module destroyed");
     };
 

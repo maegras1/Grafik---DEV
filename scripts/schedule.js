@@ -348,6 +348,11 @@ const Schedule = (() => {
                 };
                 modal.style.display = 'flex';
             },
+            openEmployeeSelectionModal(cell) {
+                console.log("openEmployeeSelectionModal called with cell:", cell);
+                // TODO: Implement employee selection modal for schedule
+                window.showToast("Funkcja wyboru pracownika nie jest jeszcze zaimplementowana.");
+            },
             toggleSpecialStyle(cell, dataAttribute) {
                 updateCellState(cell, state => {
                     state[dataAttribute] = !state[dataAttribute];
