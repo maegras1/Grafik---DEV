@@ -263,29 +263,54 @@ const Changes = (() => {
     };
 
     const printChangesTableToPdf = () => {
-        const { jsPDF } = window.jspdf;
-        const doc = new jsPDF({ orientation: 'landscape' });
-
-        doc.autoTable({
-            html: '#changesTable',
-            startY: 20,
-            theme: 'grid',
-            headStyles: {
-                fillColor: [76, 175, 80] // Green header
-            },
-            styles: {
-                font: 'Roboto',
-                fontSize: 10
-            },
-            didDrawPage: function (data) {
-                // Header
-                doc.setFontSize(20);
-                doc.setTextColor(40);
-                doc.text("Grafik Zmian", data.settings.margin.left, 15);
-            }
+        const table = document.getElementById('changesTable');
+        const tableHeaders = Array.from(table.querySelectorAll('thead th')).map(th => ({ text: th.textContent, style: 'tableHeader' }));
+        
+        const tableBody = Array.from(table.querySelectorAll('tbody tr')).map(tr => {
+            return Array.from(tr.querySelectorAll('td')).map(td => {
+                // Replace <br> with newline characters for pdfmake
+                return td.innerHTML.replace(/<br\s*[\/]?>/gi, "\n");
+            });
         });
 
-        doc.save('grafik-zmian.pdf');
+        const docDefinition = {
+            pageOrientation: 'landscape',
+            content: [
+                { text: 'Grafik Zmian', style: 'header' },
+                {
+                    style: 'tableExample',
+                    table: {
+                        headerRows: 1,
+                        body: [tableHeaders, ...tableBody]
+                    },
+                    layout: {
+    		fillColor: function (rowIndex, node, columnIndex) {
+    			return (rowIndex === 0) ? '#4CAF50' : null;
+    		}
+    	}
+                }
+            ],
+            styles: {
+                header: {
+                    fontSize: 18,
+                    bold: true,
+                    margin: [0, 0, 0, 10]
+                },
+                tableExample: {
+                    margin: [0, 5, 0, 15]
+                },
+                tableHeader: {
+                    bold: true,
+                    fontSize: 10,
+                    color: 'white'
+                }
+            },
+            defaultStyle: {
+                font: 'Roboto' // pdfmake uses Roboto by default which supports Polish characters
+            }
+        };
+
+        pdfMake.createPdf(docDefinition).download('grafik-zmian.pdf');
     };
 
     const init = async () => {
@@ -293,9 +318,6 @@ const Changes = (() => {
         changesHeaderRow = document.getElementById('changesHeaderRow');
         const printButton = document.getElementById('printChangesTable');
 
-        if(printButton) {
-            printButton.classList.remove('hidden');
-        }
 
         if (!changesTableBody || !changesHeaderRow) {
             console.error("Changes module: Required table elements not found. Aborting initialization.");
@@ -322,7 +344,6 @@ const Changes = (() => {
         const printButton = document.getElementById('printChangesTable');
         if(printButton) {
             printButton.removeEventListener('click', printChangesTableToPdf);
-            printButton.classList.add('hidden');
         }
         console.log("Changes module destroyed");
     };
