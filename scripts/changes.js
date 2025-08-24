@@ -119,7 +119,9 @@ const Changes = (() => {
                     const leaveEnd = new Date(leave.endDate);
 
                     if (leaveEnd >= today && !(leaveEnd < periodStart || leaveStart > periodEnd)) {
-                        leavesHtml += `${employeeName}<br>`;
+                        const employeeId = Object.keys(allLeavesData).find(key => allLeavesData[key] === employeeLeaves);
+                        const lastName = EmployeeManager.getLastNameById(employeeId);
+                        leavesHtml += `${lastName}<br>`;
                     }
                 });
             }
@@ -149,20 +151,36 @@ const Changes = (() => {
         const columnIndex = cell.cellIndex;
         const cellState = appState.changesCells[period]?.[columnIndex] || {};
         const assignedEmployees = new Set(cellState.assignedEmployees || []);
+        
+        const allAssignedEmployeesInRow = new Set();
+        if (appState.changesCells[period]) {
+            Object.values(appState.changesCells[period]).forEach(cellData => {
+                if (cellData.assignedEmployees) {
+                    cellData.assignedEmployees.forEach(id => allAssignedEmployeesInRow.add(id));
+                }
+            });
+        }
 
         for (const id in allEmployees) {
             const employee = allEmployees[id];
             const employeeEl = document.createElement('div');
             employeeEl.classList.add('employee-list-item');
-            employeeEl.textContent = employee.name;
+            employeeEl.textContent = EmployeeManager.getFullNameById(id);
             employeeEl.dataset.employeeId = id;
 
             if (assignedEmployees.has(id)) {
                 employeeEl.classList.add('selected-employee');
             }
+            
+            if (allAssignedEmployeesInRow.has(id) && !assignedEmployees.has(id)) {
+                employeeEl.classList.add('disabled-employee');
+            }
+
 
             employeeEl.addEventListener('click', () => {
-                employeeEl.classList.toggle('selected-employee');
+                if (!employeeEl.classList.contains('disabled-employee')) {
+                    employeeEl.classList.toggle('selected-employee');
+                }
             });
 
             employeeListDiv.appendChild(employeeEl);
@@ -249,7 +267,7 @@ const Changes = (() => {
             Array.from(row.cells).forEach((cell, index) => {
                 if (appState.changesCells[period]?.[index]?.assignedEmployees) {
                     const employeeNames = appState.changesCells[period][index].assignedEmployees
-                        .map(id => EmployeeManager.getNameById(id))
+                        .map(id => EmployeeManager.getFullNameById(id))
                         .join('<br>');
                     cell.innerHTML = employeeNames;
                 }
@@ -266,10 +284,19 @@ const Changes = (() => {
         const table = document.getElementById('changesTable');
         const tableHeaders = Array.from(table.querySelectorAll('thead th')).map(th => ({ text: th.textContent, style: 'tableHeader' }));
         
-        const tableBody = Array.from(table.querySelectorAll('tbody tr')).map(tr => {
-            return Array.from(tr.querySelectorAll('td')).map(td => {
-                // Replace <br> with newline characters for pdfmake
-                return td.innerHTML.replace(/<br\s*[\/]?>/gi, "\n");
+        const tableBody = Array.from(table.querySelectorAll('tbody tr')).map(row => {
+            return Array.from(row.cells).map((cell, cellIndex) => {
+                if (cellIndex === 0 || cellIndex === 8) { // Kolumna Okres i Urlopy
+                    return cell.innerHTML.replace(/<br\s*[\/]?>/gi, "\n");
+                }
+                const period = row.dataset.startDate;
+                const cellState = appState.changesCells[period]?.[cellIndex];
+                if (cellState?.assignedEmployees) {
+                    return cellState.assignedEmployees
+                        .map(id => EmployeeManager.getLastNameById(id))
+                        .join('\n');
+                }
+                return '';
             });
         });
 
