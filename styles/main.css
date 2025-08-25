@@ -99,9 +99,9 @@ body {
     box-shadow: -2px 0 5px rgba(0,0,0,0.2); /* Cień dla efektu wysuwania */
     display: flex;
     flex-direction: column;
-    justify-content: space-between; /* Rozmieść elementy, aby stopka była na dole */
+    /*justify-content: space-between; /* Rozmieść elementy, aby stopka była na dole */
     padding-top: 0;
-    padding-bottom: 40px; /* Zwiększono padding na dole, aby zapewnić więcej miejsca dla stopki */
+    /*padding-bottom: 40px; /* Zwiększono padding na dole, aby zapewnić więcej miejsca dla stopki */
     box-sizing: border-box;
 }
 

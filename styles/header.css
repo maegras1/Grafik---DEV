@@ -128,11 +128,17 @@
     right: 0;
 }
 
-.nav-panel ul {
+.nav-panel ul:first-of-type {
     list-style: none;
     padding: 20px 0;
     margin: 0;
-    flex-grow: 1;
+    flex-grow: 1; /* To sprawi, że tylko pierwsza lista linków się rozciągnie */
+}
+
+.nav-panel ul {
+    list-style: none;
+    padding: 0; /* Usuwamy dopełnienie z pozostałych list */
+    margin: 0;
 }
 
 .nav-panel li a {

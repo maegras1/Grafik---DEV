@@ -2,9 +2,12 @@ const Leaves = (() => {
     // --- SELEKTORY I ZMIENNE GLOBALNE ---
     let loadingOverlay, leavesTableBody, leavesHeaderRow, searchInput, clearSearchBtn,
         monthlyViewBtn, summaryViewBtn, careViewBtn, monthlyViewContainer, careViewContainer;
+    
+    const months = ["Styczeń", "Luty", "Marzec", "Kwiecień", "Maj", "Czerwiec", "Lipiec", "Sierpień", "Wrzesień", "Październik", "Listopad", "Grudzień"];
 
     let currentYear = new Date().getUTCFullYear();
     let activeCell = null;
+    let activeFilters = new Set();
 
     // --- Nazwane funkcje obsługi zdarzeń ---
     const _handleAppSearch = (e) => {
@@ -94,6 +97,44 @@ const Leaves = (() => {
         }
     };
 
+    const generateFiltersAndAttachListeners = () => {
+        const filterContainer = document.getElementById('leavesFilterContainer');
+        if (!filterContainer) return;
+
+        const leaveOptions = [
+            { value: 'vacation', text: 'Wypoczynkowy' },
+            { value: 'child_care_art_188', text: 'Opieka nad zdrowym dzieckiem' },
+            { value: 'sick_child_care', text: 'Opieka nad chorym dzieckiem' },
+            { value: 'family_member_care', text: 'Opieka chorym członkiem rodziny' }
+        ];
+        
+        let filtersHtml = '';
+        activeFilters.clear();
+
+        leaveOptions.forEach(option => {
+            filtersHtml += `
+                <label class="filter-label">
+                    <input type="checkbox" class="filter-checkbox" value="${option.value}" checked>
+                    ${option.text}
+                </label>
+            `;
+            activeFilters.add(option.value);
+        });
+        filterContainer.innerHTML = `<strong>Filtruj wg typu:</strong>` + filtersHtml;
+
+        filterContainer.addEventListener('change', async (e) => {
+            if (e.target.classList.contains('filter-checkbox')) {
+                if (e.target.checked) {
+                    activeFilters.add(e.target.value);
+                } else {
+                    activeFilters.delete(e.target.value);
+                }
+                const allLeaves = await getAllLeavesData();
+                renderAllEmployeeLeaves(allLeaves);
+            }
+        });
+    };
+
     // --- FUNKCJE POMOCNICZE UTC ---
     const toUTCDate = (dateString) => {
         const [year, month, day] = dateString.split('-').map(Number);
@@ -140,6 +181,7 @@ const Leaves = (() => {
             setupEventListeners();
             await showMonthlyView();
             generateLegend();
+            generateFiltersAndAttachListeners();
 
             // --- Inicjalizacja Menu Kontekstowego ---
             const contextMenuItems = [
@@ -302,7 +344,9 @@ const Leaves = (() => {
         if (!employeeRow) return;
         employeeRow.querySelectorAll('.day-cell').forEach(cell => { cell.innerHTML = ''; });
 
-        leaves.forEach(leave => {
+        const filteredLeaves = leaves.filter(leave => activeFilters.has(leave.type || 'vacation'));
+
+        filteredLeaves.forEach(leave => {
             if (!leave.id || !leave.startDate || !leave.endDate) return;
             
             const bgColor = AppConfig.leaves.leaveTypeColors[leave.type] || AppConfig.leaves.leaveTypeColors.default;
@@ -319,6 +363,8 @@ const Leaves = (() => {
                     const monthEnd = new Date(Math.min(end, Date.UTC(currentYear, currentMonth + 1, 0)));
                     const div = document.createElement('div');
                     div.classList.add('leave-block');
+                    const leaveTypeName = document.querySelector(`#leaveTypeSelect option[value="${leave.type || 'vacation'}"]`).textContent;
+                    div.setAttribute('title', leaveTypeName);
                     div.style.backgroundColor = bgColor;
                     let text = '';
                     if (start < monthStart) text += `<span class="arrow">←</span> `;

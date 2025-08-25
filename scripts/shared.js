@@ -51,7 +51,8 @@ const Shared = (() => {
             });
             navPanel.appendChild(ul);
 
-            // Add logout button
+            // Add logout button in a separate list to push it to the bottom
+            const logoutUl = document.createElement('ul');
             const logoutLi = document.createElement('li');
             logoutLi.id = 'logoutBtnContainer';
             logoutLi.style.display = 'none'; // Initially hidden
@@ -60,7 +61,8 @@ const Shared = (() => {
             logoutA.id = 'logoutBtn';
             logoutA.innerHTML = '<i class="fas fa-sign-out-alt"></i> <span>Wyloguj</span>';
             logoutLi.appendChild(logoutA);
-            ul.appendChild(logoutLi);
+            logoutUl.appendChild(logoutLi);
+            navPanel.appendChild(logoutUl); // Dodaj nową listę bezpośrednio do panelu
 
             const footerInfo = document.createElement('div');
             footerInfo.className = 'footer-info';
