@@ -313,25 +313,46 @@
     transition: none;
 }
 
-/* Legenda typów urlopów */
-.leaves-legend {
-    margin-top: 20px;
-    padding: 15px;
-    background-color: #f8f9fa;
-    border: 1px solid #dee2e6;
-    border-radius: 5px;
+/* Kontener filtra i legendy */
+.leaves-filter-container {
     display: flex;
     flex-wrap: wrap;
     gap: 20px;
     align-items: center;
+    padding: 15px;
+    background-color: #f8f9fa;
+    border: 1px solid #dee2e6;
+    border-radius: 5px;
+    margin-bottom: 15px;
 }
 
-.leaves-legend h4 {
-    margin: 0;
+.leaves-filter-container strong {
     margin-right: 10px;
     font-weight: 600;
     font-size: 1em;
     color: #495057;
+}
+
+#clearFiltersBtn {
+    padding: 8px 15px;
+    background-color: #dc3545; /* Czerwony kolor dla przycisku "Wyczyść" */
+    color: white;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+    font-size: 0.9em;
+    transition: background-color 0.2s ease;
+}
+
+#clearFiltersBtn:hover {
+    background-color: #c82333;
+}
+
+.leaves-legend { /* Teraz legenda jest częścią filtra */
+    display: flex;
+    flex-wrap: wrap;
+    gap: 20px;
+    align-items: center;
 }
 
 .legend-item {
@@ -339,28 +360,33 @@
     align-items: center;
     gap: 8px;
     font-size: 0.9em;
-}
-
-.legend-color-box {
-    width: 16px;
-    height: 16px;
-    border: 1px solid rgba(0,0,0,0.2);
-    border-radius: 4px;
-    display: inline-block;
-}
-
-/* Dodaj na końcu pliku */
-.leaves-filter-container {
-    display: flex;
-    align-items: center;
-    gap: 15px;
-    flex-wrap: wrap;
-}
-.filter-label {
-    display: flex;
-    align-items: center;
     cursor: pointer;
 }
-.filter-checkbox {
+
+.leaves-filter-container .legend-color-box {
+    display: inline-block;
+    width: 20px;
+    height: 20px;
+    border-radius: 4px;
+    vertical-align: middle;
     margin-right: 5px;
+    cursor: pointer;
+    border: 2px solid transparent;
+    transition: border-color 0.2s ease-in-out;
+}
+
+.leaves-filter-container .filter-checkbox:checked + .legend-color-box {
+    border-color: #333;
+    box-shadow: 0 0 0 2px rgba(0, 0, 0, 0.2);
+}
+
+.leaves-filter-container .legend-color-box:hover {
+    opacity: 0.8;
+}
+
+.leaves-filter-container .filter-checkbox {
+    position: absolute;
+    opacity: 0;
+    width: 0;
+    height: 0;
 }

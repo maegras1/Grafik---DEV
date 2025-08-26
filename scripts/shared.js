@@ -31,6 +31,12 @@ const Shared = (() => {
             
             const navPanel = document.createElement('div');
             navPanel.className = 'nav-panel';
+
+            const userInfoDiv = document.createElement('div');
+            userInfoDiv.className = 'user-info';
+            userInfoDiv.id = 'navPanelUserInfo'; // Dodaj ID dla łatwiejszej aktualizacji
+            userInfoDiv.textContent = 'Zalogowano jako: Gość'; // Domyślny tekst
+            navPanel.appendChild(userInfoDiv);
             
             const ul = document.createElement('ul');
             navLinks.forEach(link => {
@@ -48,6 +54,12 @@ const Shared = (() => {
 
                 li.appendChild(a);
                 ul.appendChild(li);
+
+                // Ukryj menu po kliknięciu linku
+                a.addEventListener('click', () => {
+                    navPanel.classList.remove('visible');
+                    hamburger.classList.remove('active');
+                });
             });
             navPanel.appendChild(ul);
 
@@ -159,13 +171,30 @@ const Shared = (() => {
             logoutBtn.addEventListener('click', () => {
                 firebase.auth().signOut().then(() => {
                     window.location.hash = '#login'; // Przekieruj po wylogowaniu
+                    // Explicitly get elements to ensure they are correctly referenced
+                    const currentNavPanel = document.querySelector('.nav-panel');
+                    const currentHamburger = document.querySelector('.hamburger-menu');
+                    if (currentNavPanel) {
+                        currentNavPanel.classList.remove('visible'); // Ukryj menu po wylogowaniu
+                    }
+                    if (currentHamburger) {
+                        currentHamburger.classList.remove('active');
+                    }
                 });
             });
         }
     };
 
+    const updateUserInfo = (userName) => {
+        const userInfoElement = document.getElementById('navPanelUserInfo');
+        if (userInfoElement) {
+            userInfoElement.textContent = `Zalogowano jako: ${userName || 'Gość'}`;
+        }
+    };
+
     return {
-        initialize
+        initialize,
+        updateUserInfo // Eksportuj nową metodę
     };
 })();
 

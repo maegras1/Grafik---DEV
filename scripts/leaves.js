@@ -1,7 +1,8 @@
 const Leaves = (() => {
     // --- SELEKTORY I ZMIENNE GLOBALNE ---
     let loadingOverlay, leavesTableBody, leavesHeaderRow, searchInput, clearSearchBtn,
-        monthlyViewBtn, summaryViewBtn, careViewBtn, monthlyViewContainer, careViewContainer;
+        monthlyViewBtn, summaryViewBtn, careViewBtn, monthlyViewContainer, careViewContainer,
+        clearFiltersBtn, leavesFilterContainer;
     
     const months = ["Styczeń", "Luty", "Marzec", "Kwiecień", "Maj", "Czerwiec", "Lipiec", "Sierpień", "Wrzesień", "Październik", "Listopad", "Grudzień"];
 
@@ -97,43 +98,6 @@ const Leaves = (() => {
         }
     };
 
-    const generateFiltersAndAttachListeners = () => {
-        const filterContainer = document.getElementById('leavesFilterContainer');
-        if (!filterContainer) return;
-
-        const leaveOptions = [
-            { value: 'vacation', text: 'Wypoczynkowy' },
-            { value: 'child_care_art_188', text: 'Opieka nad zdrowym dzieckiem' },
-            { value: 'sick_child_care', text: 'Opieka nad chorym dzieckiem' },
-            { value: 'family_member_care', text: 'Opieka chorym członkiem rodziny' }
-        ];
-        
-        let filtersHtml = '';
-        activeFilters.clear();
-
-        leaveOptions.forEach(option => {
-            filtersHtml += `
-                <label class="filter-label">
-                    <input type="checkbox" class="filter-checkbox" value="${option.value}" checked>
-                    ${option.text}
-                </label>
-            `;
-            activeFilters.add(option.value);
-        });
-        filterContainer.innerHTML = `<strong>Filtruj wg typu:</strong>` + filtersHtml;
-
-        filterContainer.addEventListener('change', async (e) => {
-            if (e.target.classList.contains('filter-checkbox')) {
-                if (e.target.checked) {
-                    activeFilters.add(e.target.value);
-                } else {
-                    activeFilters.delete(e.target.value);
-                }
-                const allLeaves = await getAllLeavesData();
-                renderAllEmployeeLeaves(allLeaves);
-            }
-        });
-    };
 
     // --- FUNKCJE POMOCNICZE UTC ---
     const toUTCDate = (dateString) => {
@@ -143,19 +107,49 @@ const Leaves = (() => {
 
     // --- GŁÓWNA LOGIKA APLIKACJI ---
 
-    const generateLegend = () => {
+    const generateLegendAndFilters = () => {
         const legendContainer = document.getElementById('leavesLegend');
         if (!legendContainer) return;
-        legendContainer.innerHTML = '<h4>Legenda:</h4>';
+        legendContainer.innerHTML = '<strong>Filtruj wg typu:</strong>';
         const leaveTypeSelect = document.getElementById('leaveTypeSelect');
         
+        // Jeśli activeFilters jest puste, zainicjuj je wszystkimi typami urlopów
+        if (activeFilters.size === 0) {
+            Array.from(leaveTypeSelect.options).forEach(option => {
+                activeFilters.add(option.value);
+            });
+        }
+
+        legendContainer.innerHTML = '<strong>Filtruj wg typu:</strong>'; // Wyczyść kontener przed ponownym generowaniem
+
         Array.from(leaveTypeSelect.options).forEach(option => {
             const key = option.value;
             const color = AppConfig.leaves.leaveTypeColors[key] || AppConfig.leaves.leaveTypeColors.default;
-            const legendItem = document.createElement('div');
-            legendItem.className = 'legend-item';
-            legendItem.innerHTML = `<span class="legend-color-box" style="background-color: ${color};"></span> ${option.textContent}`;
-            legendContainer.appendChild(legendItem);
+            
+            const filterItem = document.createElement('label');
+            filterItem.className = 'legend-item filter-label';
+            filterItem.innerHTML = `
+                <input type="checkbox" class="filter-checkbox" value="${key}" ${activeFilters.has(key) ? 'checked' : ''}>
+                <span class="legend-color-box" style="background-color: ${color};"></span> ${option.textContent}
+            `;
+            legendContainer.appendChild(filterItem);
+        });
+
+        // Usuń poprzednie nasłuchiwacze, aby uniknąć wielokrotnego przypisania
+        const oldLegendContainer = legendContainer.cloneNode(true);
+        legendContainer.parentNode.replaceChild(oldLegendContainer, legendContainer);
+        const newLegendContainer = document.getElementById('leavesLegend');
+
+        newLegendContainer.addEventListener('change', async (e) => {
+            if (e.target.classList.contains('filter-checkbox')) {
+                if (e.target.checked) {
+                    activeFilters.add(e.target.value);
+                } else {
+                    activeFilters.delete(e.target.value);
+                }
+                const allLeaves = await getAllLeavesData();
+                renderAllEmployeeLeaves(allLeaves);
+            }
         });
     };
 
@@ -171,6 +165,7 @@ const Leaves = (() => {
         careViewBtn = document.getElementById('careViewBtn');
         monthlyViewContainer = document.getElementById('leavesTable');
         careViewContainer = document.getElementById('careViewContainer');
+        leavesFilterContainer = document.getElementById('leavesFilterContainer'); // Inicjalizuj tutaj
 
         // Inicjalizacja modułów zależnych
         CalendarModal.init();
@@ -178,10 +173,10 @@ const Leaves = (() => {
         if (loadingOverlay) loadingOverlay.style.display = 'flex';
         try {
             await EmployeeManager.load();
-            setupEventListeners();
-            await showMonthlyView();
-            generateLegend();
-            generateFiltersAndAttachListeners();
+            generateLegendAndFilters(); // Generuj filtry przed pierwszym renderowaniem
+            clearFiltersBtn = document.getElementById('clearFiltersBtn'); // Inicjalizuj tutaj po wygenerowaniu filtrów
+            setupEventListeners(); // Ustaw nasłuchiwacze po wygenerowaniu filtrów
+            await showMonthlyView(); // Wywołaj showMonthlyView po załadowaniu filtrów
 
             // --- Inicjalizacja Menu Kontekstowego ---
             const contextMenuItems = [
@@ -206,6 +201,7 @@ const Leaves = (() => {
         leavesTableBody.removeEventListener('click', _handleTableClick);
         document.removeEventListener('keydown', _handleKeyDown);
         document.removeEventListener('app:search', _handleAppSearch);
+        clearFiltersBtn.removeEventListener('click', handleClearFilters);
 
         if (window.destroyContextMenu) {
             window.destroyContextMenu('contextMenu');
@@ -240,6 +236,16 @@ const Leaves = (() => {
         leavesTableBody.addEventListener('click', _handleTableClick);
         document.addEventListener('keydown', _handleKeyDown);
         document.addEventListener('app:search', _handleAppSearch);
+        if (clearFiltersBtn) { // Dodaj sprawdzenie istnienia elementu
+            clearFiltersBtn.addEventListener('click', handleClearFilters);
+        }
+    };
+
+    const handleClearFilters = async () => {
+        activeFilters.clear(); // Wyczyść wszystkie aktywne filtry
+        generateLegendAndFilters(); // Ponownie wygeneruj legendę, aby odznaczyć wszystkie checkboxy
+        const allLeaves = await getAllLeavesData();
+        renderAllEmployeeLeaves(allLeaves);
     };
 
     const showMonthlyView = async () => {
@@ -249,6 +255,7 @@ const Leaves = (() => {
 
         monthlyViewContainer.style.display = '';
         careViewContainer.style.display = 'none';
+        leavesFilterContainer.style.display = 'flex'; // Pokaż kontener filtrów
 
         generateTableHeaders();
         const employees = EmployeeManager.getAll();
@@ -264,6 +271,7 @@ const Leaves = (() => {
         
         monthlyViewContainer.style.display = ''; // Podsumowanie roczne używa tej samej tabeli
         careViewContainer.style.display = 'none';
+        leavesFilterContainer.style.display = 'none'; // Ukryj kontener filtrów
 
         const allLeaves = await getAllLeavesData();
         LeavesSummary.render(leavesHeaderRow, leavesTableBody, allLeaves);
@@ -276,6 +284,7 @@ const Leaves = (() => {
 
         monthlyViewContainer.style.display = 'none';
         careViewContainer.style.display = 'block';
+        leavesFilterContainer.style.display = 'none'; // Ukryj kontener filtrów
 
         const allLeaves = await getAllLeavesData();
         LeavesCareSummary.render(careViewContainer, allLeaves);
