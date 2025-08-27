@@ -22,6 +22,7 @@ const Shared = (() => {
                 { href: '#schedule', text: 'Grafik', icon: 'fas fa-calendar-alt' },
                 { href: '#leaves', text: 'Urlopy', icon: 'fas fa-plane-departure' },
                 { href: '#changes', text: 'Harmonogram zmian', icon: 'fas fa-exchange-alt' },
+                { href: '#scrapped-pdfs', text: 'Pobrane PDFy', icon: 'fas fa-file-pdf' },
                 { href: '#options', text: 'Opcje', icon: 'fas fa-cogs' }
             ];
             

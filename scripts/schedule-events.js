@@ -322,7 +322,13 @@ const ScheduleEvents = (() => {
 
         const contextMenuItems = [
             { id: 'contextPatientInfo', class: 'info', condition: cell => !cell.classList.contains('break-cell') && _dependencies.ui.getElementText(cell).trim() !== '', action: (cell, event) => _dependencies.openPatientInfoModal(event.target.closest('div[tabindex="0"]') || event.target.closest('td.editable-cell')) },
-            { id: 'contextAddBreak', action: cell => _dependencies.updateCellState(cell, state => { state.isBreak = true; window.showToast('Dodano przerwę'); }) },
+            { id: 'contextAddBreak', action: cell => {
+                if (_dependencies.ui.getElementText(cell).trim() !== '') {
+                    window.showToast('Nie można dodać przerwy do zajętej komórki. Najpierw wyczyść komórkę.', 3000);
+                    return;
+                }
+                _dependencies.updateCellState(cell, state => { state.isBreak = true; window.showToast('Dodano przerwę'); });
+            }},
             { id: 'contextClear', class: 'danger', action: cell => _dependencies.updateCellState(cell, state => { Object.keys(state).forEach(key => delete state[key]); window.showToast('Wyczyszczono komórkę'); }) },
             { id: 'contextSplitCell', action: cell => _dependencies.updateCellState(cell, state => { state.content1 = state.content || ''; state.content2 = ''; delete state.content; state.isSplit = true; window.showToast('Podzielono komórkę'); }) },
             { id: 'contextMassage', action: cell => _dependencies.toggleSpecialStyle(cell, 'isMassage') },
@@ -347,6 +353,10 @@ const ScheduleEvents = (() => {
         });
         document.getElementById('btnAddBreak')?.addEventListener('click', () => {
             if (activeCell) {
+                if (_dependencies.ui.getElementText(activeCell).trim() !== '') {
+                    window.showToast('Nie można dodać przerwy do zajętej komórki. Najpierw wyczyść komórkę.', 3000);
+                    return;
+                }
                 _dependencies.updateCellState(activeCell, state => { state.isBreak = true; window.showToast('Dodano przerwę'); });
             } else {
                 window.showToast('Wybierz komórkę, aby dodać przerwę.', 3000);

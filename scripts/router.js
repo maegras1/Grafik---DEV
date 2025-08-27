@@ -22,6 +22,13 @@ const Router = (() => {
             },
             getModule: () => (typeof Changes !== 'undefined' ? Changes : null)
         },
+        'scrapped-pdfs': { // <== DODAJ TEN BLOK
+        page: 'scrapped-pdfs',
+        init: () => {
+            if (typeof ScrappedPdfs !== 'undefined') ScrappedPdfs.init();
+        },
+        getModule: () => (typeof ScrappedPdfs !== 'undefined' ? ScrappedPdfs : null)
+         },
         'options': {
             page: 'options',
             init: () => {
