@@ -1,8 +1,7 @@
 const ScrappedPdfs = (() => {
-    // WAŻNE: Wklej tutaj adres URL Twojej usługi z Render.com
-    const RENDER_API_URL = 'https://pdf-scraper-api-5qqr.onrender.com/api/pdfs';
+    const SCRAPED_PDFS_CACHE_KEY = 'scrapedPdfLinks'; // Klucz do localStorage
 
-    const fetchAndDisplayPdfLinks = async () => {
+    const fetchAndDisplayPdfLinks = () => {
         const container = document.getElementById('pdf-links-container');
         if (!container) {
             console.error('Nie znaleziono kontenera na linki PDF.');
@@ -11,14 +10,11 @@ const ScrappedPdfs = (() => {
         container.innerHTML = '<p>Ładowanie linków...</p>';
 
         try {
-            const response = await fetch(RENDER_API_URL);
-            if (!response.ok) {
-                throw new Error(`Błąd HTTP: ${response.status}`);
-            }
-            const links = await response.json();
+            const cachedLinks = localStorage.getItem(SCRAPED_PDFS_CACHE_KEY);
+            const links = cachedLinks ? JSON.parse(cachedLinks) : [];
 
             if (!links || links.length === 0) {
-                container.innerHTML = '<p>Brak dostępnych linków PDF. Scraper mógł jeszcze nie zakończyć pracy. Spróbuj odświeżyć stronę za chwilę.</p>';
+                container.innerHTML = '<p>Brak dostępnych linków PDF. Spróbuj odświeżyć stronę ISO, aby pobrać najnowsze linki.</p>';
                 return;
             }
 
