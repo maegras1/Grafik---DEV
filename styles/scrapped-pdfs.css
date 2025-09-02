@@ -73,3 +73,20 @@
     background-color: #e9ecef;
     border-radius: 12px;
 }
+
+/* Kolory dla różnych typów dokumentów */
+.doc-type-badge.doc-type-iso { background-color: #e0f7fa; color: #003739; } /* Ciemny Cyjan */
+.doc-type-badge.doc-type-iso-dokumenty-strategiczne { background-color: #e0f7fa; color: #006064; } /* Cyjan */
+.doc-type-badge.doc-type-iso-6-3-nadzor-nad-infrastruktura { background-color: #f3e5f5; color: #6a1b9a; } /* Fioletowy */
+.doc-type-badge.doc-type-komunikaty-nfz-gif { background-color: #e3f2fd; color: #1565c0; } /* Jasnoniebieski */
+.doc-type-badge.doc-type-druki { background-color: #fbe9e7; color: #bf360c; } /* Ciemnopomarańczowy */
+.doc-type-badge.doc-type-ulotki { background-color: #e0f2f7; color: #01579b; } /* Głęboki niebieski */
+.doc-type-badge.doc-type-karty { background-color: #eceff1; color: #37474f; } /* Ciemnoszary */
+.doc-type-badge.doc-type-pisma-na-placowki { background-color: #fff0f5; color: #800080; } /* Lawendowy */
+.doc-type-badge.doc-type-szkolenia { background-color: #e8f5e9; color: #2e7d32; } /* Ciemnozielony */
+.doc-type-badge.doc-type-informacje-komisji-socjalnej { background-color: #fff3e0; color: #e65100; } /* Pomarańczowy */
+.doc-type-badge.doc-type-akty-prawne { background-color: #ffebee; color: #c62828; } /* Czerwony */
+.doc-type-badge.doc-type-materialy-ze-szkolen { background-color: #f1f8e9; color: #558b2f; } /* Limonkowy */
+.doc-type-badge.doc-type-wywieszki-na-tablice { background-color: #ede7f6; color: #4527a0; } /* Głęboki fiolet */
+.doc-type-badge.doc-type-covid { background-color: #fffde7; color: #fbc02d; } /* Żółty */
+.doc-type-badge.doc-type-inne { background-color: #e9ecef; color: #333; } /* Domyślny szary dla innych */
