@@ -14,10 +14,9 @@ const ScrappedPdfs = (() => {
 
         linksToDisplay.forEach(linkData => {
             const row = document.createElement('tr');
-            const docTypeClass = `doc-type-${linkData.type.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '')}`;
             row.innerHTML = `
                 <td>${linkData.date}</td>
-                <td><span class="doc-type-badge ${docTypeClass}">${linkData.type}</span></td>
+                <td><span class="doc-type-badge">${linkData.type}</span></td>
                 <td><a href="${linkData.url}" target="_blank"><i class="fas fa-file-pdf"></i> ${linkData.title}</a></td>
             `;
             tableBody.appendChild(row);
