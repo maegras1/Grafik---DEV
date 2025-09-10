@@ -9,17 +9,33 @@
     margin-top: 0;
 }
 
-.search-and-info {
+.search-and-refresh-container {
     display: flex;
-    justify-content: space-between;
+    justify-content: flex-end; /* Przesuwa elementy na prawą stronę */
     align-items: center;
     margin-bottom: 20px;
-    flex-wrap: wrap;
     gap: 15px;
 }
 
-.search-and-info .search-container {
+.search-and-refresh-container .search-container {
     min-width: 300px;
+    flex-grow: 0; /* Nie pozwala polu wyszukiwania rosnąć */
+    max-width: 400px; /* Ogranicza maksymalną szerokość pola wyszukiwania */
+}
+
+.refresh-button {
+    padding: 10px 15px;
+    background-color: #007bff;
+    color: white;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+    font-size: 0.9em;
+    transition: background-color 0.2s ease;
+}
+
+.refresh-button:hover {
+    background-color: #0056b3;
 }
 
 .modern-table {
