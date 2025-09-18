@@ -69,19 +69,9 @@ const ScrappedPdfs = (() => {
         });
     };
 
-    const initRefreshButton = () => {
-        const refreshButton = document.getElementById('refreshPageButton');
-        if (refreshButton) {
-            refreshButton.addEventListener('click', () => {
-                window.location.reload();
-            });
-        }
-    };
-
     const init = () => {
         fetchAndDisplayPdfLinks();
         initSearch();
-        initRefreshButton();
     };
 
     const destroy = () => { allLinksData = []; };
