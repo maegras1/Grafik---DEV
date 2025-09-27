@@ -1,6 +1,7 @@
 // Firebase App (the core Firebase SDK) is always required and must be listed first
 // database for testing purposes
 
+// Testowa Baza Danych
 const firebaseConfig = {
   apiKey: "AIzaSyDNY67dtYOw5z8rDqs_7rfSixsMDDukQEw",
   authDomain: "grafikkalinowa.firebaseapp.com",
@@ -15,3 +16,4 @@ const firebaseConfig = {
 // Initialize Firebase
 firebase.initializeApp(firebaseConfig);
 const db = firebase.firestore();
+
