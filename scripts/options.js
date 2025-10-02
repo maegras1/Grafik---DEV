@@ -9,6 +9,28 @@ const Options = (() => {
     // --- ZMIENNE STANU APLIKACJI ---
     let selectedEmployeeIndex = null;
 
+    // --- NAZWANE FUNKCJE OBSŁUGI ZDARZEŃ ---
+    const handleAssignUid = () => {
+        const currentUser = firebase.auth().currentUser;
+        if (currentUser) {
+            // Sprawdź, czy ten UID nie jest już przypisany do innego pracownika
+            const allEmployees = EmployeeManager.getAll();
+            const existingEmployee = Object.values(allEmployees).find(emp => emp.uid === currentUser.uid);
+            if (existingEmployee && existingEmployee.id !== selectedEmployeeIndex) {
+                window.showToast(`Ten użytkownik jest już przypisany do: ${existingEmployee.displayName}.`, 4000);
+                return;
+            }
+            employeeUidInput.value = currentUser.uid;
+        } else {
+            window.showToast("Nie jesteś zalogowany.", 3000);
+        }
+    };
+
+    const handleClearUid = () => {
+        employeeUidInput.value = '';
+    };
+
+
     // --- FUNKCJE POMOCNICZE ---
     const showLoading = (show) => {
         if (loadingOverlay) {
@@ -185,10 +207,16 @@ const Options = (() => {
                 }
             }
 
-            await EmployeeManager.load(); // Przeładuj dane, aby mieć pewność
-            renderEmployeeList();
-            handleEmployeeSelect(selectedEmployeeIndex);
+            await EmployeeManager.load(); // Przeładuj dane, aby mieć pewność, że EmployeeManager ma aktualne dane
+
+            // Zamiast przebudowywać całą listę, zaktualizuj tylko zmieniony element
+            const listItem = employeeListContainer.querySelector(`.employee-list-item[data-employee-index="${selectedEmployeeIndex}"]`);
+            if (listItem) {
+                const nameToDisplay = (newFirstName && newLastName) ? `${newFirstName} ${newLastName}` : newDisplayName;
+                listItem.querySelector('span').textContent = nameToDisplay;
+            }
             window.showToast("Dane pracownika zaktualizowane.", 2000);
+            // Nie ma potrzeby wywoływać handleEmployeeSelect, bo formularz już ma nowe dane
 
         } catch (error) {
             console.error("Błąd podczas zapisywania zmian pracownika:", error);
@@ -307,25 +335,8 @@ const Options = (() => {
         saveEmployeeBtn.addEventListener('click', handleSaveEmployee);
         deleteEmployeeBtn.addEventListener('click', handleDeleteEmployee);
 
-        assignUidBtn.addEventListener('click', () => {
-            const currentUser = firebase.auth().currentUser;
-            if (currentUser) {
-                // Sprawdź, czy ten UID nie jest już przypisany do innego pracownika
-                const allEmployees = EmployeeManager.getAll();
-                const existingEmployee = Object.values(allEmployees).find(emp => emp.uid === currentUser.uid);
-                if (existingEmployee && existingEmployee.id !== selectedEmployeeIndex) {
-                    window.showToast(`Ten użytkownik jest już przypisany do: ${existingEmployee.displayName}.`, 4000);
-                    return;
-                }
-                employeeUidInput.value = currentUser.uid;
-            } else {
-                window.showToast("Nie jesteś zalogowany.", 3000);
-            }
-        });
-
-        clearUidBtn.addEventListener('click', () => {
-            employeeUidInput.value = '';
-        });
+        assignUidBtn.addEventListener('click', handleAssignUid);
+        clearUidBtn.addEventListener('click', handleClearUid);
     };
 
     const destroy = () => {
@@ -333,8 +344,8 @@ const Options = (() => {
         addEmployeeBtn.removeEventListener('click', handleAddEmployee);
         saveEmployeeBtn.removeEventListener('click', handleSaveEmployee);
         deleteEmployeeBtn.removeEventListener('click', handleDeleteEmployee);
-        assignUidBtn.removeEventListener('click');
-        clearUidBtn.removeEventListener('click');
+        assignUidBtn.removeEventListener('click', handleAssignUid);
+        clearUidBtn.removeEventListener('click', handleClearUid);
         console.log("Options module destroyed");
     };
 

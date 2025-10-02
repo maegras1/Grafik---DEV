@@ -111,9 +111,7 @@ const Schedule = (() => {
         });
 
         const mainController = {
-            exitEditMode(element) {
-                if (!element || element.getAttribute('contenteditable') !== 'true') return;
-                const newText = capitalizeFirstLetter(element.textContent.trim());
+            processExitEditMode(element, newText) {
                 element.setAttribute('contenteditable', 'false');
                 const parentCell = element.closest('td');
                 if (!parentCell) return;
@@ -156,8 +154,8 @@ const Schedule = (() => {
                         cellState.content = newText;
                     }
 
-                    // Jeśli pacjent nie istnieje i komórka nie ma jeszcze daty, ustaw ją
-                    if (!patientExists && !cellState.treatmentStartDate) {
+                    // Jeśli pacjent nie istnieje, komórka nie ma jeszcze daty i nie jest to operacja przeniesienia, ustaw datę
+                    if (!patientExists && !cellState.treatmentStartDate && !isMove) {
                         const today = new Date();
                         const year = today.getFullYear();
                         const month = String(today.getMonth() + 1).padStart(2, '0');
@@ -174,6 +172,27 @@ const Schedule = (() => {
                 } else {
                     updateSchedule(false);
                 }
+            },
+
+            exitEditMode(element) {
+                if (!element || element.getAttribute('contenteditable') !== 'true') return;
+                const newText = capitalizeFirstLetter(element.textContent.trim());
+
+                // Sprawdź, czy wprowadzony tekst to same cyfry
+                if (/^\d+$/.test(newText)) {
+                    this.showNumericConfirmationDialog(newText, 
+                        () => { // onConfirm
+                            this.processExitEditMode(element, newText);
+                        }, 
+                        () => { // onCancel
+                            element.setAttribute('contenteditable', 'false');
+                            ScheduleUI.render(); // Przywróć poprzedni stan przez re-render
+                        }
+                    );
+                    return; // Zatrzymaj dalsze wykonywanie, czekając na decyzję użytkownika
+                }
+
+                this.processExitEditMode(element, newText);
             },
             enterEditMode(element, clearContent = false, initialChar = '') {
                 if (!element || element.classList.contains('break-cell') || element.getAttribute('contenteditable') === 'true') return;
@@ -247,6 +266,25 @@ const Schedule = (() => {
                     if (onCancel) onCancel();
                 };
             },
+            showNumericConfirmationDialog(text, onConfirm, onCancel) {
+                const modal = document.getElementById('numericConfirmationModal');
+                const modalText = document.getElementById('numericConfirmationModalText');
+                const confirmBtn = document.getElementById('confirmNumericBtn');
+                const cancelBtn = document.getElementById('cancelNumericBtn');
+
+                modalText.innerHTML = `Czy na pewno chcesz wprowadzić do grafiku ciąg cyfr: "<b>${text}</b>"?`;
+                modal.style.display = 'flex';
+
+                const closeAndCleanup = () => {
+                    modal.style.display = 'none';
+                    confirmBtn.onclick = null;
+                    cancelBtn.onclick = null;
+                };
+
+                confirmBtn.onclick = () => { closeAndCleanup(); onConfirm(); };
+                cancelBtn.onclick = () => { closeAndCleanup(); onCancel(); };
+            },
+
             getCurrentTableStateForCell(cell) {
                 if (cell.tagName === 'TH') {
                     return { content: ScheduleUI.getElementText(cell) };
