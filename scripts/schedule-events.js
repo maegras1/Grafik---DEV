@@ -163,13 +163,33 @@ const ScheduleEvents = (() => {
             const targetIndex = dropTargetCell.dataset.employeeIndex;
 
             const sourceData = _dependencies.appState.scheduleCells[sourceTime]?.[sourceIndex] || {};
-            const targetData = _dependencies.appState.scheduleCells[targetTime]?.[targetIndex] || {};
+            let targetData = _dependencies.appState.scheduleCells[targetTime]?.[targetIndex] || {};
 
-            if (!_dependencies.appState.scheduleCells[sourceTime]) _dependencies.appState.scheduleCells[sourceTime] = {};
-            _dependencies.appState.scheduleCells[sourceTime][sourceIndex] = targetData;
-            
+            // Get the content of the target cell before it's overwritten
+            const oldTargetContent = targetData.isSplit ? `${(targetData.content1 || '')}/${(targetData.content2 || '')}` : targetData.content;
+
+            // The new state for the target cell is the source cell's data
+            let newTargetData = { ...sourceData };
+
+            // If the target had content, add it to the history of the moved entry
+            if (oldTargetContent && oldTargetContent.trim() !== '') {
+                if (!newTargetData.history) {
+                    newTargetData.history = [];
+                }
+                // Add old target content to the front of the history, avoiding duplicates
+                if (newTargetData.history[0] !== oldTargetContent) {
+                    newTargetData.history.unshift(oldTargetContent);
+                }
+                newTargetData.history = newTargetData.history.slice(0, 3);
+            }
+
+            // Update target cell
             if (!_dependencies.appState.scheduleCells[targetTime]) _dependencies.appState.scheduleCells[targetTime] = {};
-            _dependencies.appState.scheduleCells[targetTime][targetIndex] = sourceData;
+            _dependencies.appState.scheduleCells[targetTime][targetIndex] = newTargetData;
+
+            // Clear source cell
+            if (!_dependencies.appState.scheduleCells[sourceTime]) _dependencies.appState.scheduleCells[sourceTime] = {};
+            _dependencies.appState.scheduleCells[sourceTime][sourceIndex] = {};
 
             _dependencies.renderAndSave();
             _dependencies.undoManager.pushState(_dependencies.getCurrentTableState());
@@ -343,6 +363,49 @@ const ScheduleEvents = (() => {
                 }
                 _dependencies.updateCellState(cell, state => { state.isBreak = true; window.showToast('Dodano przerwę'); });
             }},
+            { 
+                id: 'contextHistory', 
+                condition: cell => {
+                    const cellState = _dependencies.appState.scheduleCells[cell.dataset.time]?.[cell.dataset.employeeIndex];
+                    return cellState && cellState.history && cellState.history.length > 0;
+                },
+                onShow: (cell) => {
+                    const subMenu = document.getElementById('contextHistorySubMenu');
+                    const cellState = _dependencies.appState.scheduleCells[cell.dataset.time]?.[cell.dataset.employeeIndex];
+                    subMenu.innerHTML = ''; // Clear previous items
+
+                    if (cellState && cellState.history && cellState.history.length > 0) {
+                        cellState.history.forEach(historyEntry => {
+                            const li = document.createElement('li');
+                            li.textContent = historyEntry;
+                            li.addEventListener('click', (e) => {
+                                e.stopPropagation(); // Prevent menu from closing
+                                _dependencies.updateCellState(cell, state => {
+                                    if (historyEntry.includes('/')) {
+                                        const parts = historyEntry.split('/', 2);
+                                        state.isSplit = true;
+                                        state.content1 = parts[0];
+                                        state.content2 = parts[1];
+                                        delete state.content;
+                                    } else {
+                                        state.isSplit = false;
+                                        state.content = historyEntry;
+                                        delete state.content1;
+                                        delete state.content2;
+                                    }
+                                });
+                                document.getElementById('contextMenu').classList.remove('visible');
+                            });
+                            subMenu.appendChild(li);
+                        });
+                    } else {
+                        const li = document.createElement('li');
+                        li.textContent = 'Brak historii';
+                        li.classList.add('empty-history');
+                        subMenu.appendChild(li);
+                    }
+                }
+            },
             { id: 'contextClear', class: 'danger', action: cell => _dependencies.updateCellState(cell, state => { Object.keys(state).forEach(key => delete state[key]); window.showToast('Wyczyszczono komórkę'); }) },
             { id: 'contextSplitCell', action: cell => _dependencies.updateCellState(cell, state => { state.content1 = state.content || ''; state.content2 = ''; delete state.content; state.isSplit = true; window.showToast('Podzielono komórkę'); }) },
             { id: 'contextMergeCells', class: 'info', condition: cell => cell.classList.contains('split-cell'), action: cell => _dependencies.mergeSplitCell(cell) },

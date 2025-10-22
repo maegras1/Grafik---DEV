@@ -90,6 +90,20 @@ const Schedule = (() => {
         if (!appState.scheduleCells[time]) appState.scheduleCells[time] = {};
         let cellState = appState.scheduleCells[time][employeeIndex] || {};
         
+        const oldContent = cellState.isSplit ? `${cellState.content1 || ''}/${cellState.content2 || ''}` : cellState.content;
+        if (oldContent) {
+            if (!cellState.history) {
+                cellState.history = [];
+            }
+            // Add to the beginning and prevent duplicates
+            if (cellState.history[0] !== oldContent) {
+                cellState.history.unshift(oldContent);
+            }
+            // Keep only the last 3 entries
+            cellState.history = cellState.history.slice(0, 3);
+        }
+        // --- End of History Management ---
+
         updateFn(cellState);
 
         appState.scheduleCells[time][employeeIndex] = cellState;
@@ -126,8 +140,20 @@ const Schedule = (() => {
                     if (!appState.scheduleCells[time][employeeIndex]) appState.scheduleCells[time][employeeIndex] = {};
                     let cellState = appState.scheduleCells[time][employeeIndex];
 
-                    if (isMove && duplicate) {
-                        // Przenieś cały stan z duplikatu do bieżącej komórki
+                                            // --- History Management ---
+                                            const oldContent = cellState.isSplit ? `${(cellState.content1 || '')}/${(cellState.content2 || '')}` : cellState.content;
+                                            if (oldContent && oldContent.trim() !== '' && oldContent !== newText) {
+                                                if (!cellState.history) {
+                                                    cellState.history = [];
+                                                }
+                                                if (cellState.history[0] !== oldContent) {
+                                                    cellState.history.unshift(oldContent);
+                                                }
+                                                cellState.history = cellState.history.slice(0, 3);
+                                            }
+                                            // --- End of History Management ---
+                    
+                                            if (isMove && duplicate) {                        // Przenieś cały stan z duplikatu do bieżącej komórki
                         const oldCellState = appState.scheduleCells[duplicate.time][duplicate.employeeIndex];
                         cellState = { ...oldCellState }; // Kopiuj stan starej komórki do nowej
                         
