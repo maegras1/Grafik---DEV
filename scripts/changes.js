@@ -1,4 +1,9 @@
-const Changes = (() => {
+// scripts/changes.js
+import { db } from './firebase-config.js';
+import { AppConfig } from './common.js';
+import { EmployeeManager } from './employee-manager.js';
+
+export const Changes = (() => {
     let changesTableBody, changesHeaderRow;
     let appState = {
         changesCells: {}
@@ -34,10 +39,10 @@ const Changes = (() => {
                     workDaysCount++;
                 }
                 if (workDaysCount < 10) {
-                   endDate.setUTCDate(endDate.getUTCDate() + 1);
+                    endDate.setUTCDate(endDate.getUTCDate() + 1);
                 }
             }
-            
+
             periods.push({
                 start: startDate.toISOString().split('T')[0],
                 end: endDate.toISOString().split('T')[0]
@@ -114,26 +119,28 @@ const Changes = (() => {
 
             const employees = EmployeeManager.getAll();
 
-            for (const employeeName in allLeavesData) {
-                const employee = Object.values(employees).find(emp => (emp.displayName || emp.name) === employeeName);
-                if (employee && employee.isHidden) continue;
+            for (const employeeId in employees) {
+                const employee = employees[employeeId];
+                if (employee.isHidden) continue;
 
+                const employeeName = employee.displayName || employee.name;
                 const employeeLeaves = allLeavesData[employeeName];
-                employeeLeaves.forEach(leave => {
-                    const leaveStart = new Date(leave.startDate);
-                    const leaveEnd = new Date(leave.endDate);
 
-                    // Uwzględnij tylko urlopy wypoczynkowe i wszystkie daty
-                    if (leave.type === 'vacation' && !(leaveEnd < periodStart || leaveStart > periodEnd)) {
-                        const employeeId = Object.keys(employees).find(id => (employees[id].displayName || employees[id].name) === employeeName);
-                        const lastName = EmployeeManager.getLastNameById(employeeId);
-                        leavesHtml += `${lastName}<br>`;
-                    }
-                });
+                if (Array.isArray(employeeLeaves)) {
+                    employeeLeaves.forEach(leave => {
+                        const leaveStart = new Date(leave.startDate);
+                        const leaveEnd = new Date(leave.endDate);
+
+                        if (leave.type === 'vacation' && !(leaveEnd < periodStart || leaveStart > periodEnd)) {
+                            const lastName = EmployeeManager.getLastNameById(employeeId);
+                            // Fallback to full name if last name is not available
+                            leavesHtml += `${lastName || employeeName}<br>`;
+                        }
+                    });
+                }
             }
             leavesCell.innerHTML = leavesHtml;
 
-            // Dodaj klasę 'past-period' jeśli okres jest w przeszłości
             if (periodEnd < today) {
                 row.classList.add('past-period');
             }
@@ -164,7 +171,7 @@ const Changes = (() => {
         const columnIndex = cell.cellIndex;
         const cellState = appState.changesCells[period]?.[columnIndex] || {};
         const assignedEmployees = new Set(cellState.assignedEmployees || []);
-        
+
         const allAssignedEmployeesInRow = new Set();
         if (appState.changesCells[period]) {
             Object.values(appState.changesCells[period]).forEach(cellData => {
@@ -184,7 +191,7 @@ const Changes = (() => {
             if (assignedEmployees.has(id)) {
                 employeeEl.classList.add('selected-employee');
             }
-            
+
             if (allAssignedEmployeesInRow.has(id) && !assignedEmployees.has(id)) {
                 employeeEl.classList.add('disabled-employee');
             }
@@ -243,11 +250,11 @@ const Changes = (() => {
         const columnIndex = cell.cellIndex;
         if (!appState.changesCells[period]) appState.changesCells[period] = {};
         let cellState = appState.changesCells[period][columnIndex] || {};
-        
+
         updateFn(cellState);
 
         appState.changesCells[period][columnIndex] = cellState;
-        
+
         renderChangesAndSave();
     };
 
@@ -287,7 +294,7 @@ const Changes = (() => {
             });
         });
     };
-    
+
     const renderChangesAndSave = () => {
         renderChangesContent();
         saveChanges();
@@ -296,7 +303,7 @@ const Changes = (() => {
     const printChangesTableToPdf = () => {
         const table = document.getElementById('changesTable');
         const tableHeaders = Array.from(table.querySelectorAll('thead th')).map(th => ({ text: th.textContent, style: 'tableHeader' }));
-        
+
         const tableBody = Array.from(table.querySelectorAll('tbody tr')).map(row => {
             return Array.from(row.cells).map((cell, cellIndex) => {
                 if (cellIndex === 0 || cellIndex === 8) { // Kolumna Okres i Urlopy
@@ -324,10 +331,10 @@ const Changes = (() => {
                         body: [tableHeaders, ...tableBody]
                     },
                     layout: {
-    		fillColor: function (rowIndex, node, columnIndex) {
-    			return (rowIndex === 0) ? '#4CAF50' : null;
-    		}
-    	}
+                        fillColor: function (rowIndex, node, columnIndex) {
+                            return (rowIndex === 0) ? '#4CAF50' : null;
+                        }
+                    }
                 }
             ],
             styles: {
@@ -363,8 +370,8 @@ const Changes = (() => {
             console.error("Changes module: Required table elements not found. Aborting initialization.");
             return;
         }
-        
-        if(printButton) {
+
+        if (printButton) {
             printButton.addEventListener('click', printChangesTableToPdf);
         }
 
@@ -382,7 +389,7 @@ const Changes = (() => {
 
     const destroy = () => {
         const printButton = document.getElementById('printChangesTable');
-        if(printButton) {
+        if (printButton) {
             printButton.removeEventListener('click', printChangesTableToPdf);
         }
         console.log("Changes module destroyed");
@@ -393,3 +400,6 @@ const Changes = (() => {
         destroy
     };
 })();
+
+// Backward compatibility
+window.Changes = Changes;

@@ -1,4 +1,8 @@
-const UIShell = (() => {
+// scripts/ui-shell.js
+import { Shared } from './shared.js';
+import { EmployeeManager } from './employee-manager.js';
+
+export const UIShell = (() => {
     const render = () => {
         const appRoot = document.getElementById('app-root');
         if (!appRoot) {
@@ -22,13 +26,9 @@ const UIShell = (() => {
                     <div id="saveStatus" class="save-status"></div> <!-- Przeniesiony saveStatus na początek -->
                     <div id="scheduleActionButtons" class="schedule-action-buttons">
                         <button id="btnPatientInfo" class="action-icon-btn" title="Informacje o pacjencie"><i class="fas fa-user-circle"></i></button>
-                        <button id="btnSplitCell" class="action-icon-btn" title="Podziel komórkę"><i class="fas fa-users"></i></button>
-                        <button id="btnMergeCells" class="action-icon-btn" title="Scal komórki"><i class="fas fa-user"></i></button>
                         <button id="btnAddBreak" class="action-icon-btn" title="Dodaj przerwę"><i class="fas fa-coffee"></i></button>
-                        <button id="btnMassage" class="action-icon-btn" title="Oznacz jako Masaż"><i class="fas fa-hand-paper"></i></button>
-                        <button id="btnPnf" class="action-icon-btn" title="Oznacz jako PNF"><i class="fas fa-brain"></i></button>
-                        <button id="btnEveryOtherDay" class="action-icon-btn" title="Oznacz jako Co 2 Dni"><i class="fas fa-calendar-alt"></i></button> <!-- Nowy przycisk -->
                         <button id="btnClearCell" class="action-icon-btn danger" title="Wyczyść komórkę"><i class="fas fa-trash-alt"></i></button>
+                        <button id="btnIso" class="action-icon-btn" title="Dokumenty ISO"><i class="fas fa-file-alt"></i><span class="notification-badge" style="display: none;"></span></button>
                     </div>
                     <div class="search-container">
                         <i class="fas fa-search search-icon"></i>
@@ -54,16 +54,58 @@ const UIShell = (() => {
                 window.location.hash = 'schedule'; // Use hash navigation for SPA
             });
         }
+
+        const btnIso = document.getElementById('btnIso');
+        if (btnIso) {
+            btnIso.addEventListener('click', () => {
+                window.location.hash = 'scrapped-pdfs';
+            });
+        }
+
+        window.addEventListener('iso-updates-available', (event) => {
+            const badge = document.querySelector('#btnIso .notification-badge');
+            if (badge) {
+                badge.style.display = 'block';
+                // Optional: badge.textContent = event.detail.count;
+            }
+        });
+
+        window.addEventListener('iso-updates-cleared', () => {
+            const badge = document.querySelector('#btnIso .notification-badge');
+            if (badge) {
+                badge.style.display = 'none';
+            }
+        });
     };
 
-    const loadPage = async (pageName) => { // Usunięto callback
+    const loadPage = async (pageName) => {
         const pageContent = document.getElementById('page-content');
+        const DYNAMIC_CSS_ID = 'page-specific-css';
+
         if (!pageContent) {
             console.error('Fatal error: #page-content element not found.');
             return Promise.reject('Page content container not found');
         }
 
+        // Remove old page-specific CSS
+        const oldStylesheet = document.getElementById(DYNAMIC_CSS_ID);
+        if (oldStylesheet) {
+            oldStylesheet.remove();
+        }
+
         try {
+            // Load new CSS if it exists
+            const cssPath = `styles/${pageName}.css`;
+            const cssResponse = await fetch(cssPath);
+            if (cssResponse.ok) {
+                const newStylesheet = document.createElement('link');
+                newStylesheet.id = DYNAMIC_CSS_ID;
+                newStylesheet.rel = 'stylesheet';
+                newStylesheet.href = cssPath;
+                document.head.appendChild(newStylesheet);
+            }
+
+            // Load new HTML
             const response = await fetch(`pages/${pageName}.html`);
             if (!response.ok) {
                 throw new Error(`Could not load page: ${pageName}`);
@@ -74,9 +116,9 @@ const UIShell = (() => {
             const scheduleActionButtons = document.getElementById('scheduleActionButtons');
             if (scheduleActionButtons) {
                 if (pageName === 'schedule') {
-                    scheduleActionButtons.style.display = 'flex'; // Pokaż przyciski dla strony schedule
+                    scheduleActionButtons.style.display = 'flex';
                 } else {
-                    scheduleActionButtons.style.display = 'none'; // Ukryj dla innych stron
+                    scheduleActionButtons.style.display = 'none';
                 }
             }
         } catch (error) {
@@ -146,3 +188,6 @@ const UIShell = (() => {
         hideLoading
     };
 })();
+
+// Backward compatibility
+window.UIShell = UIShell;

@@ -1,9 +1,17 @@
-const Leaves = (() => {
+// scripts/leaves.js
+import { db } from './firebase-config.js';
+import { AppConfig, hideLoadingOverlay } from './common.js';
+import { EmployeeManager } from './employee-manager.js';
+import { LeavesSummary } from './leaves-summary.js';
+import { LeavesCareSummary } from './leaves-care-summary.js';
+import { CalendarModal } from './calendar-modal.js';
+
+export const Leaves = (() => {
     // --- SELEKTORY I ZMIENNE GLOBALNE ---
     let loadingOverlay, leavesTableBody, leavesHeaderRow, searchInput, clearSearchBtn,
         monthlyViewBtn, summaryViewBtn, careViewBtn, monthlyViewContainer, careViewContainer,
-        clearFiltersBtn, leavesFilterContainer;
-    
+        clearFiltersBtn, leavesFilterContainer, yearSelect;
+
     const months = ["Styczeń", "Luty", "Marzec", "Kwiecień", "Maj", "Czerwiec", "Lipiec", "Sierpień", "Wrzesień", "Październik", "Listopad", "Grudzień"];
 
     let currentYear = new Date().getUTCFullYear();
@@ -105,6 +113,30 @@ const Leaves = (() => {
         return new Date(Date.UTC(year, month - 1, day));
     };
 
+    const handleYearChange = async (e) => {
+        currentYear = parseInt(e.target.value, 10);
+        await showMonthlyView(); // Re-render the monthly view for the new year
+    };
+
+    const populateYearSelect = () => {
+        const currentYear = new Date().getUTCFullYear();
+        const startYear = currentYear - 5; // 5 years back
+        const endYear = currentYear + 5;   // 5 years forward
+
+        yearSelect.innerHTML = ''; // Clear existing options
+
+        for (let year = startYear; year <= endYear; year++) {
+            const option = document.createElement('option');
+            option.value = year;
+            option.textContent = year;
+            if (year === currentYear) {
+                option.selected = true;
+            }
+            yearSelect.appendChild(option);
+        }
+        yearSelect.addEventListener('change', handleYearChange);
+    };
+
     // --- GŁÓWNA LOGIKA APLIKACJI ---
 
     const generateLegendAndFilters = () => {
@@ -112,7 +144,7 @@ const Leaves = (() => {
         if (!legendContainer) return;
         legendContainer.innerHTML = '<strong>Filtruj wg typu:</strong>';
         const leaveTypeSelect = document.getElementById('leaveTypeSelect');
-        
+
         // Jeśli activeFilters jest puste, zainicjuj je wszystkimi typami urlopów
         if (activeFilters.size === 0) {
             Array.from(leaveTypeSelect.options).forEach(option => {
@@ -125,7 +157,7 @@ const Leaves = (() => {
         Array.from(leaveTypeSelect.options).forEach(option => {
             const key = option.value;
             const color = AppConfig.leaves.leaveTypeColors[key] || AppConfig.leaves.leaveTypeColors.default;
-            
+
             const filterItem = document.createElement('label');
             filterItem.className = 'legend-item filter-label';
             filterItem.innerHTML = `
@@ -165,7 +197,8 @@ const Leaves = (() => {
         careViewBtn = document.getElementById('careViewBtn');
         monthlyViewContainer = document.getElementById('leavesTable');
         careViewContainer = document.getElementById('careViewContainer');
-        leavesFilterContainer = document.getElementById('leavesFilterContainer'); // Inicjalizuj tutaj
+        leavesFilterContainer = document.getElementById('leavesFilterContainer');
+        yearSelect = document.getElementById('yearSelect'); // Inicjalizuj yearSelect
 
         // Inicjalizacja modułów zależnych
         CalendarModal.init();
@@ -173,10 +206,11 @@ const Leaves = (() => {
         if (loadingOverlay) loadingOverlay.style.display = 'flex';
         try {
             await EmployeeManager.load();
-            generateLegendAndFilters(); // Generuj filtry przed pierwszym renderowaniem
-            clearFiltersBtn = document.getElementById('clearFiltersBtn'); // Inicjalizuj tutaj po wygenerowaniu filtrów
-            setupEventListeners(); // Ustaw nasłuchiwacze po wygenerowaniu filtrów
-            await showMonthlyView(); // Wywołaj showMonthlyView po załadowaniu filtrów
+            populateYearSelect(); // Nowa funkcja do wypełniania i ustawiania nasłuchiwacza
+            generateLegendAndFilters();
+            clearFiltersBtn = document.getElementById('clearFiltersBtn');
+            setupEventListeners();
+            await showMonthlyView();
 
             // --- Inicjalizacja Menu Kontekstowego ---
             const contextMenuItems = [
@@ -202,6 +236,7 @@ const Leaves = (() => {
         document.removeEventListener('keydown', _handleKeyDown);
         document.removeEventListener('app:search', _handleAppSearch);
         clearFiltersBtn.removeEventListener('click', handleClearFilters);
+        yearSelect.removeEventListener('change', handleYearChange); // Remove yearSelect listener
 
         if (window.destroyContextMenu) {
             window.destroyContextMenu('contextMenu');
@@ -214,12 +249,12 @@ const Leaves = (() => {
         if (!cell) return;
         const employeeName = cell.closest('tr').dataset.employee;
         const monthIndex = parseInt(cell.dataset.month, 10);
-        
+
         try {
             const allLeaves = await getAllLeavesData();
             const existingLeaves = allLeaves[employeeName] || [];
             const updatedLeaves = await CalendarModal.open(employeeName, existingLeaves, monthIndex);
-            
+
             await saveLeavesData(employeeName, updatedLeaves);
             renderSingleEmployeeLeaves(employeeName, updatedLeaves);
         } catch (error) {
@@ -268,7 +303,7 @@ const Leaves = (() => {
         monthlyViewBtn.classList.remove('active');
         summaryViewBtn.classList.add('active');
         careViewBtn.classList.remove('active');
-        
+
         monthlyViewContainer.style.display = ''; // Podsumowanie roczne używa tej samej tabeli
         careViewContainer.style.display = 'none';
         leavesFilterContainer.style.display = 'none'; // Ukryj kontener filtrów
@@ -361,7 +396,7 @@ const Leaves = (() => {
 
         filteredLeaves.forEach(leave => {
             if (!leave.id || !leave.startDate || !leave.endDate) return;
-            
+
             const bgColor = AppConfig.leaves.leaveTypeColors[leave.type] || AppConfig.leaves.leaveTypeColors.default;
             const start = toUTCDate(leave.startDate);
             const end = toUTCDate(leave.endDate);
@@ -416,3 +451,6 @@ const Leaves = (() => {
         destroy
     };
 })();
+
+// Backward compatibility
+window.Leaves = Leaves;

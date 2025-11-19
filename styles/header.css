@@ -240,3 +240,27 @@
         display: none;
     }
 }
+
+/* Notification Badge */
+.notification-badge {
+    position: absolute;
+    top: 0;
+    right: 0;
+    width: 10px;
+    height: 10px;
+    background-color: #ff0000;
+    border-radius: 50%;
+    border: 2px solid #add8e6; /* Match header background */
+    display: none; /* Hidden by default */
+}
+
+#btnIso {
+    position: relative; /* For badge positioning */
+    color: rgba(255, 255, 255, 0.4); /* Default state */
+    cursor: pointer; /* Always clickable */
+}
+
+#btnIso:hover {
+    color: white;
+}
+
