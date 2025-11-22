@@ -3,6 +3,7 @@ import { AppConfig, capitalizeFirstLetter } from './common.js';
 import { EmployeeManager } from './employee-manager.js';
 import { Shared } from './shared.js';
 import { auth } from './firebase-config.js';
+import { ScheduleLogic } from './schedule-logic.js';
 
 export const ScheduleUI = (() => {
     let _appState = null;
@@ -56,6 +57,10 @@ export const ScheduleUI = (() => {
     const initialize = (appState) => {
         _appState = appState;
         _createEmployeeTooltip(); // Utwórz globalny tooltip przy inicjalizacji
+
+        window.addEventListener('resize', () => {
+            renderTable(); // Re-render on resize to switch views
+        });
     };
 
     const getElementText = (element) => {
@@ -76,77 +81,61 @@ export const ScheduleUI = (() => {
     const applyCellDataToDom = (cell, cellObj) => {
         cell.className = 'editable-cell';
         cell.innerHTML = ''; // Clear content safely
+
+        // Remove legacy data attributes just in case
         delete cell.dataset.isMassage;
         delete cell.dataset.isPnf;
-        delete cell.dataset.isEveryOtherDay; // Usuń stary atrybut
+        delete cell.dataset.isEveryOtherDay;
 
         if (cell.tagName === 'TH') {
             cell.textContent = cellObj.content || '';
             return;
         }
 
-        if (cellObj.isBreak) {
-            cell.textContent = AppConfig.schedule.breakText;
-            cell.classList.add('break-cell');
-        } else if (cellObj.isSplit) {
-            const createPart = (content, isMassage, isPnf, isEveryOtherDay, gender) => {
+        const displayData = ScheduleLogic.getCellDisplayData(cellObj);
+
+        // Apply Classes
+        if (displayData.classes.length > 0) {
+            cell.classList.add(...displayData.classes);
+        }
+
+        // Apply Styles
+        if (displayData.styles.backgroundColor) {
+            cell.style.backgroundColor = displayData.styles.backgroundColor;
+        }
+
+        // Apply Content
+        if (displayData.isBreak) {
+            cell.textContent = displayData.text;
+        } else if (displayData.isSplit) {
+            displayData.parts.forEach(part => {
                 const div = document.createElement('div');
                 div.setAttribute('tabindex', '0');
 
                 const span = document.createElement('span');
-                span.textContent = capitalizeFirstLetter(content || '');
+                span.textContent = part.text;
                 div.appendChild(span);
 
-                if (isMassage) {
-                    div.classList.add('massage-text');
-                    div.dataset.isMassage = 'true';
+                if (part.classes.length > 0) {
+                    div.classList.add(...part.classes);
                 }
-                if (isPnf) {
-                    div.classList.add('pnf-text');
-                    div.dataset.isPnf = 'true';
-                }
-                if (isEveryOtherDay) {
-                    div.classList.add('every-other-day-text');
-                    div.dataset.isEveryOtherDay = 'true';
-                }
-                return div;
-            };
-            cell.classList.add('split-cell');
-            cell.style.backgroundColor = AppConfig.schedule.contentCellColor;
-            cell.appendChild(createPart(cellObj.content1, cellObj.isMassage1, cellObj.isPnf1, cellObj.isEveryOtherDay1, cellObj.treatmentData1?.gender));
-            cell.appendChild(createPart(cellObj.content2, cellObj.isMassage2, cellObj.isPnf2, cellObj.isEveryOtherDay2, cellObj.treatmentData2?.gender));
+
+                // Add data attributes for specific styling if needed by CSS
+                if (part.isMassage) div.dataset.isMassage = 'true';
+                if (part.isPnf) div.dataset.isPnf = 'true';
+                if (part.isEveryOtherDay) div.dataset.isEveryOtherDay = 'true';
+
+                cell.appendChild(div);
+            });
         } else {
             const span = document.createElement('span');
-            span.textContent = capitalizeFirstLetter(cellObj.content || '');
+            span.textContent = displayData.text;
             cell.appendChild(span);
 
-            if (cellObj.isMassage) {
-                cell.classList.add('massage-text');
-                cell.dataset.isMassage = 'true';
-            }
-            if (cellObj.isPnf) {
-                cell.classList.add('pnf-text');
-                cell.dataset.isPnf = 'true';
-            }
-            if (cellObj.isEveryOtherDay) {
-                cell.classList.add('every-other-day-text');
-                cell.dataset.isEveryOtherDay = 'true';
-            }
-            cell.style.backgroundColor = (getElementText(cell).trim() !== '') ? AppConfig.schedule.contentCellColor : AppConfig.schedule.defaultCellColor;
-        }
-
-        const today = new Date().toISOString().split('T')[0];
-        if (cellObj.isSplit) {
-            if (cellObj.treatmentData1?.endDate && cellObj.treatmentData1.endDate <= today) {
-                cell.children[0]?.classList.add('treatment-end-marker');
-            }
-            if (cellObj.treatmentData2?.endDate && cellObj.treatmentData2.endDate <= today) {
-                cell.children[1]?.classList.add('treatment-end-marker');
-            }
-        } else if (cellObj.treatmentEndDate) {
-            if (cellObj.treatmentEndDate <= today) {
-                cell.classList.add('treatment-end-marker');
-            }
+            // Add data attributes for specific styling if needed by CSS
+            if (cellObj.isMassage) cell.dataset.isMassage = 'true';
+            if (cellObj.isPnf) cell.dataset.isPnf = 'true';
+            if (cellObj.isEveryOtherDay) cell.dataset.isEveryOtherDay = 'true';
         }
     };
 
@@ -156,11 +145,134 @@ export const ScheduleUI = (() => {
         });
     };
 
+    const renderMobileView = (employeeIndices) => {
+        const container = document.getElementById('app-root'); // Or a specific container if exists
+        // Ideally we should have a specific container for the schedule content
+        // Let's assume we are appending to the main container or replacing the table
+
+        let mobileContainer = document.querySelector('.mobile-schedule-container');
+        if (!mobileContainer) {
+            mobileContainer = document.createElement('div');
+            mobileContainer.className = 'mobile-schedule-container';
+            const table = document.getElementById('mainScheduleTable');
+            table.parentNode.insertBefore(mobileContainer, table);
+        }
+        mobileContainer.innerHTML = ''; // Clear
+        mobileContainer.style.display = 'flex';
+
+        const table = document.getElementById('mainScheduleTable');
+        table.style.display = 'none'; // Ensure table is hidden
+
+        // For mobile, we usually focus on the logged-in user or the first selected employee
+        // If multiple employees, we might need a selector. For now, let's take the first one (Single User View logic)
+        const employeeIndex = employeeIndices[0];
+        if (employeeIndex === undefined) {
+            mobileContainer.textContent = 'Brak danych pracownika do wyświetlenia.';
+            return;
+        }
+
+        const employeeData = EmployeeManager.getById(employeeIndex);
+        const header = document.createElement('h3');
+        header.textContent = `Grafik: ${capitalizeFirstLetter(employeeData?.displayName || 'Pracownik')}`;
+        header.style.textAlign = 'center';
+        header.style.color = 'var(--color-primary-700)';
+        mobileContainer.appendChild(header);
+
+        for (let hour = AppConfig.schedule.startHour; hour <= AppConfig.schedule.endHour; hour++) {
+            for (let minute = 0; minute < 60; minute += 30) {
+                if (hour === AppConfig.schedule.endHour && minute === 30) continue;
+
+                const timeString = `${hour}:${minute.toString().padStart(2, '0')}`;
+                const cellData = _appState.scheduleCells[timeString]?.[employeeIndex] || {};
+                const displayData = ScheduleLogic.getCellDisplayData(cellData);
+
+                const card = document.createElement('div');
+                card.className = 'appointment-card';
+
+                // Header
+                const cardHeader = document.createElement('div');
+                cardHeader.className = 'card-header';
+                cardHeader.textContent = timeString;
+                card.appendChild(cardHeader);
+
+                // Body
+                const cardBody = document.createElement('div');
+                cardBody.className = 'card-body';
+
+                // Attributes for interaction (same as table cell)
+                cardBody.setAttribute('data-time', timeString);
+                cardBody.setAttribute('data-employee-index', employeeIndex);
+                cardBody.className += ' editable-cell'; // Reuse logic
+
+                if (displayData.text) {
+                    cardBody.textContent = displayData.text;
+                    if (displayData.classes.length > 0) cardBody.classList.add(...displayData.classes);
+                    if (displayData.styles.backgroundColor) cardBody.style.backgroundColor = displayData.styles.backgroundColor;
+                } else if (displayData.isSplit) {
+                    // Simplified split view for mobile - just stack them
+                    const part1 = displayData.parts[0];
+                    const part2 = displayData.parts[1];
+                    cardBody.innerHTML = `<div>${part1.text}</div><div style="border-top:1px solid #ccc; margin-top:4px; padding-top:4px;">${part2.text}</div>`;
+                    // Note: Full split styling on mobile card might need more CSS, keeping it simple for now
+                } else {
+                    cardBody.textContent = 'Wolny termin';
+                    cardBody.classList.add('empty-slot');
+                }
+
+                card.appendChild(cardBody);
+                mobileContainer.appendChild(card);
+            }
+        }
+    };
+
     const renderTable = () => {
         const mainTable = document.getElementById('mainScheduleTable');
-        if (!mainTable) {
-            return; // Zakończ, jeśli tabela nie istnieje
+        if (!mainTable) return;
+
+        // Check for mobile view
+        const isMobile = window.innerWidth <= 768;
+
+        let employeeIndices = [];
+        let isSingleUserView = false;
+        let isAdmin = false;
+
+        const currentUser = auth.currentUser;
+        if (currentUser) {
+            if (EmployeeManager.isUserAdmin(currentUser.uid)) {
+                isAdmin = true;
+                const allEmployees = EmployeeManager.getAll();
+                employeeIndices = Object.keys(allEmployees)
+                    .filter(id => !allEmployees[id].isHidden)
+                    .sort((a, b) => parseInt(a) - parseInt(b));
+                isSingleUserView = false;
+            } else {
+                const employee = EmployeeManager.getEmployeeByUid(currentUser.uid);
+                if (employee) {
+                    employeeIndices.push(employee.id);
+                    isSingleUserView = true;
+                } else {
+                    // Handle unassigned
+                }
+            }
+        } else {
+            const allEmployees = EmployeeManager.getAll();
+            employeeIndices = Object.keys(allEmployees)
+                .filter(id => !allEmployees[id].isHidden)
+                .sort((a, b) => parseInt(a) - parseInt(b));
+            isSingleUserView = false;
         }
+
+        // Only switch to mobile view if NOT admin
+        if (isMobile && !isAdmin) {
+            renderMobileView(employeeIndices);
+            return;
+        }
+
+        // Desktop View Cleanup
+        const mobileContainer = document.querySelector('.mobile-schedule-container');
+        if (mobileContainer) mobileContainer.style.display = 'none';
+        mainTable.style.display = 'table';
+
 
         const tableHeaderRow = document.getElementById('tableHeaderRow');
         const tbody = mainTable.querySelector('tbody');
@@ -176,42 +288,6 @@ export const ScheduleUI = (() => {
         tableHeaderRow.appendChild(thTime);
 
         tbody.innerHTML = '';
-
-        let employeeIndices = [];
-        let isSingleUserView = false;
-
-        const currentUser = auth.currentUser;
-        if (currentUser) {
-            if (EmployeeManager.isUserAdmin(currentUser.uid)) {
-                const allEmployees = EmployeeManager.getAll();
-                employeeIndices = Object.keys(allEmployees)
-                    .filter(id => !allEmployees[id].isHidden)
-                    .sort((a, b) => parseInt(a) - parseInt(b));
-                isSingleUserView = false;
-            } else {
-                const employee = EmployeeManager.getEmployeeByUid(currentUser.uid);
-                if (employee) {
-                    employeeIndices.push(employee.id);
-                    isSingleUserView = true;
-                } else {
-                    employeeIndices = [];
-                    isSingleUserView = true;
-                    const tr = document.createElement('tr');
-                    const td = document.createElement('td');
-                    td.colSpan = 2;
-                    td.className = 'unassigned-user-message';
-                    td.textContent = 'Twoje konto nie jest przypisane do żadnego pracownika. Skontaktuj się z administratorem.';
-                    tr.appendChild(td);
-                    tbody.appendChild(tr);
-                }
-            }
-        } else {
-            const allEmployees = EmployeeManager.getAll();
-            employeeIndices = Object.keys(allEmployees)
-                .filter(id => !allEmployees[id].isHidden)
-                .sort((a, b) => parseInt(a) - parseInt(b));
-            isSingleUserView = false;
-        }
 
         mainTable.classList.toggle('single-user-view', isSingleUserView);
 
@@ -294,23 +370,8 @@ export const ScheduleUI = (() => {
         const patientCountElement = document.getElementById('patientCount');
         if (!patientCountElement) return;
 
-        let therapyCount = 0;
-        const cells = document.querySelectorAll('#mainScheduleTable tbody td.editable-cell');
-
-        cells.forEach(cell => {
-            if (cell.classList.contains('break-cell')) return;
-
-            if (cell.classList.contains('split-cell')) {
-                const parts = cell.querySelectorAll('div > span');
-                const name1 = parts[0]?.textContent.trim();
-                const name2 = parts[1]?.textContent.trim();
-                if (name1) therapyCount++;
-                if (name2) therapyCount++;
-            } else {
-                const name = getElementText(cell).trim();
-                if (name) therapyCount++;
-            }
-        });
+        // Use pure logic instead of DOM scraping
+        const therapyCount = ScheduleLogic.calculatePatientCount(_appState.scheduleCells);
         patientCountElement.textContent = `Terapie: ${therapyCount}`;
     };
 

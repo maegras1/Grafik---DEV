@@ -31,7 +31,7 @@ export const UIShell = (() => {
                         <button id="btnIso" class="action-icon-btn" title="Dokumenty ISO"><i class="fas fa-file-alt"></i><span class="notification-badge" style="display: none;"></span></button>
                     </div>
                     <div class="search-container">
-                        <i class="fas fa-search search-icon"></i>
+                        <button id="searchToggleBtn" class="search-toggle-btn" title="Szukaj"><i class="fas fa-search"></i></button>
                         <input type="text" id="searchInput" class="search-input" placeholder="Szukaj...">
                         <button id="clearSearchButton" class="clear-search-btn" style="display: none;"><i class="fas fa-times"></i></button>
                     </div>
@@ -76,6 +76,27 @@ export const UIShell = (() => {
                 badge.style.display = 'none';
             }
         });
+
+        // Search Bar Toggle Logic
+        const searchToggleBtn = document.getElementById('searchToggleBtn');
+        const searchInput = document.getElementById('searchInput');
+        const searchContainer = document.querySelector('.search-container');
+
+        if (searchToggleBtn && searchInput) {
+            searchToggleBtn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                searchInput.classList.toggle('expanded');
+                if (searchInput.classList.contains('expanded')) {
+                    searchInput.focus();
+                }
+            });
+
+            document.addEventListener('click', (e) => {
+                if (searchContainer && !searchContainer.contains(e.target)) {
+                    searchInput.classList.remove('expanded');
+                }
+            });
+        }
     };
 
     const loadPage = async (pageName) => {

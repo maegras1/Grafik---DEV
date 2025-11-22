@@ -74,6 +74,44 @@ export const initializeContextMenu = (menuId, targetSelector, itemConfig) => {
     document.addEventListener('contextmenu', handleContextMenu);
     document.addEventListener('click', handleClickOutside);
 
+    // Long Press Support for Mobile
+    let longPressTimer;
+    const LONG_PRESS_DURATION = 500; // ms
+
+    const handleTouchStart = (event) => {
+        const target = event.target.closest(targetSelector);
+        if (target) {
+            longPressTimer = setTimeout(() => {
+                // Create a synthetic contextmenu event
+                const contextMenuEvent = new MouseEvent('contextmenu', {
+                    bubbles: true,
+                    cancelable: true,
+                    view: window,
+                    clientX: event.touches[0].clientX,
+                    clientY: event.touches[0].clientY
+                });
+                target.dispatchEvent(contextMenuEvent);
+            }, LONG_PRESS_DURATION);
+        }
+    };
+
+    const handleTouchEnd = () => {
+        if (longPressTimer) {
+            clearTimeout(longPressTimer);
+        }
+    };
+
+    const handleTouchMove = () => {
+        if (longPressTimer) {
+            clearTimeout(longPressTimer);
+        }
+    };
+
+    document.addEventListener('touchstart', handleTouchStart, { passive: true });
+    document.addEventListener('touchend', handleTouchEnd);
+    document.addEventListener('touchmove', handleTouchMove);
+    document.addEventListener('click', handleClickOutside);
+
     contextMenuInstances[menuId] = {
         handleContextMenu,
         handleClickOutside,
