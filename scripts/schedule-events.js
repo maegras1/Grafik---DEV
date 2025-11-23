@@ -17,6 +17,11 @@ export const ScheduleEvents = (() => {
             if (activeCell === target && target.getAttribute('contenteditable') === 'true') return;
             if (activeCell && activeCell.getAttribute('contenteditable') === 'true') _dependencies.exitEditMode(activeCell);
             setActiveCell(target);
+
+            // Mobile UX: Enter edit mode immediately on single tap for cards
+            if (target.classList.contains('card-body')) {
+                _dependencies.enterEditMode(target);
+            }
         } else {
             if (activeCell && activeCell.getAttribute('contenteditable') === 'true') _dependencies.exitEditMode(activeCell);
             setActiveCell(null);

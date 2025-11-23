@@ -64,7 +64,7 @@ export const ScheduleUI = (() => {
     };
 
     const getElementText = (element) => {
-        if (!element || element.classList.contains('break-cell')) return '';
+        if (!element || element.classList.contains('break-cell') || element.classList.contains('empty-slot')) return '';
         const clone = element.cloneNode(true);
         const icons = clone.querySelectorAll('.cell-icon');
         icons.forEach(icon => icon.remove());
