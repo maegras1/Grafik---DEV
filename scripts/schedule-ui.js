@@ -202,6 +202,7 @@ export const ScheduleUI = (() => {
                 // Attributes for interaction (same as table cell)
                 cardBody.setAttribute('data-time', timeString);
                 cardBody.setAttribute('data-employee-index', employeeIndex);
+                cardBody.setAttribute('tabindex', '0'); // Ensure focusable for better mobile support
                 cardBody.className += ' editable-cell'; // Reuse logic
 
                 if (displayData.text) {

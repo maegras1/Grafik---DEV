@@ -158,7 +158,7 @@ export const Schedule = (() => {
             element.dataset.originalValue = originalValue;
             element.innerHTML = ScheduleUI.getElementText(element);
             element.setAttribute('contenteditable', 'true');
-            element.classList.remove('massage-text', 'pnf-text');
+            element.classList.remove('massage-text', 'pnf-text', 'empty-slot');
             delete element.dataset.isMassage;
             delete element.dataset.isPnf;
             if (clearContent) {
