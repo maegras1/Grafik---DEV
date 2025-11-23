@@ -304,7 +304,30 @@
     }
 
     .hamburger-menu {
-        display: block;
+        display: flex;
+        /* Flex to center icon */
+        position: fixed;
+        bottom: 20px;
+        right: 20px;
+        width: 60px;
+        height: 60px;
+        background-color: var(--color-primary);
+        border-radius: 50%;
+        box-shadow: 0 4px 10px rgba(0, 0, 0, 0.3);
+        align-items: center;
+        justify-content: center;
+        z-index: 2000;
+        /* Ensure it's above everything */
+        color: white;
+        transition: transform 0.2s, background-color 0.2s;
+    }
+
+    .hamburger-menu:active {
+        transform: scale(0.95);
+    }
+
+    .hamburger-menu i {
+        font-size: 1.5rem;
     }
 }
 

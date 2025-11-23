@@ -12,7 +12,7 @@ export const ScheduleEvents = (() => {
     // --- Nazwane funkcje obsługi zdarzeń ---
 
     const _handleMainTableClick = (event) => {
-        const target = event.target.closest('td.editable-cell, div[tabindex="0"]');
+        const target = event.target.closest('td.editable-cell, div[tabindex="0"], .card-body.editable-cell');
         if (target) {
             if (activeCell === target && target.getAttribute('contenteditable') === 'true') return;
             if (activeCell && activeCell.getAttribute('contenteditable') === 'true') _dependencies.exitEditMode(activeCell);
@@ -24,7 +24,7 @@ export const ScheduleEvents = (() => {
     };
 
     const _handleMainTableDblClick = (event) => {
-        const target = event.target.closest('td.editable-cell, div[tabindex="0"]');
+        const target = event.target.closest('td.editable-cell, div[tabindex="0"], .card-body.editable-cell');
         if (target) _dependencies.enterEditMode(target);
     };
 
@@ -388,15 +388,19 @@ export const ScheduleEvents = (() => {
             return;
         }
 
-        mainTable.addEventListener('click', _handleMainTableClick);
-        mainTable.addEventListener('dblclick', _handleMainTableDblClick);
-        document.addEventListener('click', _handleDocumentClick);
-
-        mainTable.addEventListener('dragstart', _handleDragStart);
-        mainTable.addEventListener('dragover', _handleDragOver);
-        mainTable.addEventListener('dragleave', _handleDragLeave);
-        mainTable.addEventListener('drop', _handleDrop);
-        mainTable.addEventListener('dragend', _handleDragEnd);
+        const appRoot = document.getElementById('app-root');
+        if (appRoot) {
+            appRoot.addEventListener('click', _handleMainTableClick);
+            appRoot.addEventListener('dblclick', _handleMainTableDblClick);
+            // Keep drag events on table for now as drag-drop is likely desktop only or needs more work for mobile
+            mainTable.addEventListener('dragstart', _handleDragStart);
+            mainTable.addEventListener('dragover', _handleDragOver);
+            mainTable.addEventListener('dragleave', _handleDragLeave);
+            mainTable.addEventListener('drop', _handleDrop);
+            mainTable.addEventListener('dragend', _handleDragEnd);
+        } else {
+            console.error("ScheduleEvents.initialize: app-root not found.");
+        }
 
         document.addEventListener('keydown', _handleKeyDown);
         document.addEventListener('app:search', _handleAppSearch);
@@ -436,7 +440,7 @@ export const ScheduleEvents = (() => {
             { id: 'contextPnf', action: cell => _dependencies.toggleSpecialStyle(cell, 'isPnf') },
             { id: 'contextEveryOtherDay', action: cell => _dependencies.toggleSpecialStyle(cell, 'isEveryOtherDay') } // Nowa opcja
         ];
-        initializeContextMenu('contextMenu', 'td.editable-cell', contextMenuItems);
+        initializeContextMenu('contextMenu', '.editable-cell', contextMenuItems);
 
         // Obsługa kliknięć dla nowych przycisków akcji
         document.getElementById('btnPatientInfo')?.addEventListener('click', () => {
@@ -506,9 +510,12 @@ export const ScheduleEvents = (() => {
     };
 
     const destroy = () => {
+        const appRoot = document.getElementById('app-root');
+        if (appRoot) {
+            appRoot.removeEventListener('click', _handleMainTableClick);
+            appRoot.removeEventListener('dblclick', _handleMainTableDblClick);
+        }
         if (mainTable) {
-            mainTable.removeEventListener('click', _handleMainTableClick);
-            mainTable.removeEventListener('dblclick', _handleMainTableDblClick);
             mainTable.removeEventListener('dragstart', _handleDragStart);
             mainTable.removeEventListener('dragover', _handleDragOver);
             mainTable.removeEventListener('dragleave', _handleDragLeave);

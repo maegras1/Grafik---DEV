@@ -33,6 +33,11 @@ export const initializeContextMenu = (menuId, targetSelector, itemConfig) => {
                 }
             });
 
+            // Temporarily show to measure
+            contextMenu.style.visibility = 'hidden';
+            contextMenu.style.display = 'block'; // Ensure it has dimensions
+            contextMenu.classList.add('visible'); // Add class if it affects styling/dimensions
+
             const { clientX: mouseX, clientY: mouseY } = event;
             const { innerWidth: windowWidth, innerHeight: windowHeight } = window;
             const menuWidth = contextMenu.offsetWidth;
@@ -41,12 +46,24 @@ export const initializeContextMenu = (menuId, targetSelector, itemConfig) => {
             let x = mouseX;
             let y = mouseY;
 
-            if (mouseX + menuWidth > windowWidth) x = windowWidth - menuWidth - 5;
-            if (mouseY + menuHeight > windowHeight) y = windowHeight - menuHeight - 5;
+            // Prevent going off-screen right
+            if (x + menuWidth > windowWidth) {
+                x = windowWidth - menuWidth - 10;
+            }
+
+            // Prevent going off-screen bottom
+            if (y + menuHeight > windowHeight) {
+                y = windowHeight - menuHeight - 10;
+            }
+
+            // Ensure not negative (top/left)
+            if (x < 0) x = 10;
+            if (y < 0) y = 10;
 
             contextMenu.style.left = `${x}px`;
             contextMenu.style.top = `${y}px`;
-            contextMenu.classList.add('visible');
+            contextMenu.style.visibility = 'visible';
+            // contextMenu.classList.add('visible'); // Already added above
         }
     };
 

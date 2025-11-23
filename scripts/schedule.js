@@ -31,7 +31,7 @@ export const Schedule = (() => {
     const mainController = {
         processExitEditMode(element, newText) {
             element.setAttribute('contenteditable', 'false');
-            const parentCell = element.closest('td');
+            const parentCell = element.closest('[data-time]'); // Changed from 'td' to support mobile cards
             if (!parentCell) return;
             const employeeIndex = parentCell.dataset.employeeIndex;
             const time = parentCell.dataset.time;
@@ -151,7 +151,8 @@ export const Schedule = (() => {
                 }
                 return;
             }
-            const isEditableTarget = (element.tagName === 'TD' && !element.classList.contains('split-cell')) || (element.tagName === 'DIV' && element.parentNode.classList.contains('split-cell'));
+            const isEditableTarget = (element.tagName === 'TD' && !element.classList.contains('split-cell')) ||
+                (element.tagName === 'DIV' && (element.parentNode.classList.contains('split-cell') || element.classList.contains('editable-cell')));
             if (!isEditableTarget) return;
             const originalValue = ScheduleUI.getElementText(element);
             element.dataset.originalValue = originalValue;
