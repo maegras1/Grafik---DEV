@@ -24,36 +24,36 @@ import { Login } from './login.js';
 
 export const Router = (() => {
     const routes = {
-        'schedule': {
+        schedule: {
             page: 'schedule',
             init: () => Schedule.init(),
-            getModule: () => Schedule
+            getModule: () => Schedule,
         },
-        'leaves': {
+        leaves: {
             page: 'leaves',
             init: () => Leaves.init(),
-            getModule: () => Leaves
+            getModule: () => Leaves,
         },
-        'changes': {
+        changes: {
             page: 'changes',
             init: () => Changes.init(),
-            getModule: () => Changes
+            getModule: () => Changes,
         },
         'scrapped-pdfs': {
             page: 'scrapped-pdfs',
             init: () => ScrappedPdfs.init(),
-            getModule: () => ScrappedPdfs
+            getModule: () => ScrappedPdfs,
         },
-        'options': {
+        options: {
             page: 'options',
             init: () => Options.init(),
-            getModule: () => Options
+            getModule: () => Options,
         },
-        'login': {
+        login: {
             page: 'login',
             init: () => Login.init(),
-            getModule: () => Login
-        }
+            getModule: () => Login,
+        },
     };
 
     let activeModule = null;
@@ -66,7 +66,7 @@ export const Router = (() => {
         window.addEventListener('hashchange', navigate);
 
         let isInitialAuthCheck = true;
-        auth.onAuthStateChanged(user => {
+        auth.onAuthStateChanged((user) => {
             const currentUid = user ? user.uid : null;
             if (isInitialAuthCheck || currentUid !== lastUserUid) {
                 currentUser = user;
@@ -140,9 +140,8 @@ export const Router = (() => {
                 await PdfService.fetchAndCachePdfLinks(true);
                 PdfService.markAsSeen();
             }
-
         } catch (error) {
-            console.error("Navigation error:", error);
+            console.error('Navigation error:', error);
         } finally {
             UIShell.hideLoading();
             isNavigating = false;
@@ -155,5 +154,4 @@ export const Router = (() => {
 })();
 
 // Backward compatibility - keeping it for now as requested in plan, but marked for removal
-// window.Router = Router; 
-
+// window.Router = Router;

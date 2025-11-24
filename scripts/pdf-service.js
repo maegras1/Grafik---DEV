@@ -13,7 +13,9 @@ export const PdfService = (() => {
 
         if (currentCount > seenCount) {
             // Dispatch event for UI to show badge
-            window.dispatchEvent(new CustomEvent('iso-updates-available', { detail: { count: currentCount - seenCount } }));
+            window.dispatchEvent(
+                new CustomEvent('iso-updates-available', { detail: { count: currentCount - seenCount } }),
+            );
         } else {
             window.dispatchEvent(new CustomEvent('iso-updates-cleared'));
         }
@@ -71,7 +73,9 @@ export const PdfService = (() => {
         });
 
         sse.onerror = (error) => {
-            console.warn('Nie udało się nawiązać połączenia SSE z serwerem PDF Scraper. Ta funkcja nie jest krytyczna dla działania grafiku.');
+            console.warn(
+                'Nie udało się nawiązać połączenia SSE z serwerem PDF Scraper. Ta funkcja nie jest krytyczna dla działania grafiku.',
+            );
             sse.close();
             sse = null;
         };
@@ -89,6 +93,6 @@ export const PdfService = (() => {
         initRealtimeUpdates,
         destroy,
         markAsSeen,
-        checkForNewDocuments
+        checkForNewDocuments,
     };
 })();
