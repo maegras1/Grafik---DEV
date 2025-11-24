@@ -29,7 +29,7 @@ describe('DOM Parser Logic', () => {
             date: '2023-10-25',
             type: 'Grafik',
             title: 'Pobierz',
-            url: 'http://example.com/grafik.pdf'
+            url: 'http://example.com/grafik.pdf',
         });
     });
 
@@ -54,7 +54,7 @@ describe('DOM Parser Logic', () => {
             date: '2023-10-26',
             type: 'Zmiany',
             title: 'Link',
-            url: 'http://example.com/zmiany.pdf'
+            url: 'http://example.com/zmiany.pdf',
         });
     });
 

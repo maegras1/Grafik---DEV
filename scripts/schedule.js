@@ -31,7 +31,7 @@ export const Schedule = (() => {
     const mainController = {
         processExitEditMode(element, newText) {
             element.setAttribute('contenteditable', 'false');
-            const parentCell = element.closest('td');
+            const parentCell = element.closest('[data-time]'); // Changed from 'td' to support mobile cards
             if (!parentCell) return;
             const employeeIndex = parentCell.dataset.employeeIndex;
             const time = parentCell.dataset.time;
@@ -111,7 +111,14 @@ export const Schedule = (() => {
             };
 
             if (duplicate) {
-                ScheduleModals.showDuplicateConfirmationDialog(duplicate, () => updateSchedule(true), () => updateSchedule(false), () => { ScheduleUI.render(); });
+                ScheduleModals.showDuplicateConfirmationDialog(
+                    duplicate,
+                    () => updateSchedule(true),
+                    () => updateSchedule(false),
+                    () => {
+                        ScheduleUI.render();
+                    },
+                );
             } else {
                 updateSchedule(false);
             }
@@ -129,12 +136,15 @@ export const Schedule = (() => {
             }
 
             if (/^\d+$/.test(newText)) {
-                ScheduleModals.showNumericConfirmationDialog(newText,
-                    () => { this.processExitEditMode(element, newText); },
+                ScheduleModals.showNumericConfirmationDialog(
+                    newText,
+                    () => {
+                        this.processExitEditMode(element, newText);
+                    },
                     () => {
                         element.setAttribute('contenteditable', 'false');
                         ScheduleUI.render();
-                    }
+                    },
                 );
                 return;
             }
@@ -143,7 +153,12 @@ export const Schedule = (() => {
         },
 
         enterEditMode(element, clearContent = false, initialChar = '') {
-            if (!element || element.classList.contains('break-cell') || element.getAttribute('contenteditable') === 'true') return;
+            if (
+                !element ||
+                element.classList.contains('break-cell') ||
+                element.getAttribute('contenteditable') === 'true'
+            )
+                return;
             if (element.tagName === 'TD' && element.classList.contains('split-cell')) {
                 const firstDiv = element.querySelector('div');
                 if (firstDiv) {
@@ -151,13 +166,17 @@ export const Schedule = (() => {
                 }
                 return;
             }
-            const isEditableTarget = (element.tagName === 'TD' && !element.classList.contains('split-cell')) || (element.tagName === 'DIV' && element.parentNode.classList.contains('split-cell'));
+            const isEditableTarget =
+                (element.tagName === 'TD' && !element.classList.contains('split-cell')) ||
+                (element.tagName === 'DIV' &&
+                    (element.parentNode.classList.contains('split-cell') ||
+                        element.classList.contains('editable-cell')));
             if (!isEditableTarget) return;
             const originalValue = ScheduleUI.getElementText(element);
             element.dataset.originalValue = originalValue;
             element.innerHTML = ScheduleUI.getElementText(element);
             element.setAttribute('contenteditable', 'true');
-            element.classList.remove('massage-text', 'pnf-text');
+            element.classList.remove('massage-text', 'pnf-text', 'empty-slot');
             delete element.dataset.isMassage;
             delete element.dataset.isPnf;
             if (clearContent) {
@@ -185,9 +204,11 @@ export const Schedule = (() => {
                         continue;
                     }
                     const cellData = appState.scheduleCells[time][employeeIndex];
-                    if (cellData.content?.toLowerCase() === lowerCaseText ||
+                    if (
+                        cellData.content?.toLowerCase() === lowerCaseText ||
                         cellData.content1?.toLowerCase() === lowerCaseText ||
-                        cellData.content2?.toLowerCase() === lowerCaseText) {
+                        cellData.content2?.toLowerCase() === lowerCaseText
+                    ) {
                         return { time, employeeIndex, cellData };
                     }
                 }
@@ -212,13 +233,13 @@ export const Schedule = (() => {
                     isMassage1: part1?.dataset.isMassage === 'true',
                     isMassage2: part2?.dataset.isMassage === 'true',
                     isPnf1: part1?.dataset.isPnf === 'true',
-                    isPnf2: part2?.dataset.isPnf === 'true'
+                    isPnf2: part2?.dataset.isPnf === 'true',
                 };
             }
             return {
                 content: ScheduleUI.getElementText(cell),
                 isMassage: cell.dataset.isMassage === 'true',
-                isPnf: cell.dataset.isPnf === 'true'
+                isPnf: cell.dataset.isPnf === 'true',
             };
         },
 
@@ -248,7 +269,7 @@ export const Schedule = (() => {
         },
 
         toggleSpecialStyle(cell, dataAttribute) {
-            updateCellState(cell, state => {
+            updateCellState(cell, (state) => {
                 if (state.isSplit) {
                     state[`${dataAttribute}1`] = !state[`${dataAttribute}1`];
                     state[`${dataAttribute}2`] = !state[`${dataAttribute}2`];
@@ -279,7 +300,7 @@ export const Schedule = (() => {
 
             const mergedContent = content1.trim() === '' ? content2 : content1;
 
-            updateCellState(cell, state => {
+            updateCellState(cell, (state) => {
                 delete state.isSplit;
                 delete state.content1;
                 delete state.content2;
@@ -293,17 +314,36 @@ export const Schedule = (() => {
         },
 
         clearCell(cell) {
-            const clearContent = state => {
-                const contentKeys = ['content', 'content1', 'content2', 'isSplit', 'isBreak', 'isMassage', 'isPnf', 'isEveryOtherDay', 'treatmentStartDate', 'treatmentExtensionDays', 'treatmentEndDate', 'additionalInfo', 'treatmentData1', 'treatmentData2', 'isMassage1', 'isMassage2', 'isPnf1', 'isPnf2'];
+            const clearContent = (state) => {
+                const contentKeys = [
+                    'content',
+                    'content1',
+                    'content2',
+                    'isSplit',
+                    'isBreak',
+                    'isMassage',
+                    'isPnf',
+                    'isEveryOtherDay',
+                    'treatmentStartDate',
+                    'treatmentExtensionDays',
+                    'treatmentEndDate',
+                    'additionalInfo',
+                    'treatmentData1',
+                    'treatmentData2',
+                    'isMassage1',
+                    'isMassage2',
+                    'isPnf1',
+                    'isPnf2',
+                ];
                 for (const key of contentKeys) {
-                    if (state.hasOwnProperty(key)) {
+                    if (Object.prototype.hasOwnProperty.call(state, key)) {
                         state[key] = null;
                     }
                 }
                 window.showToast('Wyczyszczono komórkę');
             };
             updateCellState(cell, clearContent);
-        }
+        },
     };
 
     const handleUndoClick = () => {
@@ -337,7 +377,7 @@ export const Schedule = (() => {
                         if (ScheduleData.pushCurrentState) {
                             ScheduleData.pushCurrentState();
                         }
-                    }
+                    },
                 },
                 ui: ScheduleUI,
                 updateCellState: updateCellState,
@@ -353,11 +393,10 @@ export const Schedule = (() => {
                 toggleSpecialStyle: mainController.toggleSpecialStyle.bind(mainController),
                 mergeSplitCell: mainController.mergeSplitCell.bind(mainController),
                 undoLastAction: mainController.undoLastAction.bind(mainController),
-                clearCell: mainController.clearCell.bind(mainController)
+                clearCell: mainController.clearCell.bind(mainController),
             });
 
-
-            auth.onAuthStateChanged(user => {
+            auth.onAuthStateChanged((user) => {
                 if (user) {
                     ScheduleData.setCurrentUserId(user.uid);
                 } else {
@@ -365,10 +404,9 @@ export const Schedule = (() => {
                 }
                 ScheduleData.listenForScheduleChanges();
             });
-
         } catch (error) {
-            console.error("Błąd inicjalizacji strony harmonogramu:", error);
-            window.showToast("Wystąpił krytyczny błąd inicjalizacji. Odśwież stronę.", 5000);
+            console.error('Błąd inicjalizacji strony harmonogramu:', error);
+            window.showToast('Wystąpił krytyczny błąd inicjalizacji. Odśwież stronę.', 5000);
         } finally {
             if (loadingOverlay) hideLoadingOverlay(loadingOverlay);
         }
@@ -381,12 +419,12 @@ export const Schedule = (() => {
         ScheduleEvents.destroy();
         ScheduleData.destroy();
         ScheduleUI.destroy();
-        console.log("Schedule module destroyed");
+        console.log('Schedule module destroyed');
     };
 
     return {
         init,
-        destroy
+        destroy,
     };
 })();
 

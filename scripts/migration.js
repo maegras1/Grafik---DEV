@@ -1,5 +1,4 @@
 const Migration = (() => {
-
     const runMigration = async () => {
         const sourceDocId = '2025-08-08'; // Dokument źródłowy z danymi
         const targetDocId = 'mainSchedule'; // Dokument docelowy
@@ -27,13 +26,15 @@ const Migration = (() => {
                 return;
             }
 
-            await targetRef.set({
-                scheduleCells: scheduleCellsToMigrate
-            }, { merge: true });
+            await targetRef.set(
+                {
+                    scheduleCells: scheduleCellsToMigrate,
+                },
+                { merge: true },
+            );
 
             console.log('Migracja zakończona pomyślnie!');
             window.showToast('Dane grafiku zostały pomyślnie przeniesione do mainSchedule!', 5000);
-
         } catch (error) {
             console.error('Wystąpił błąd podczas migracji:', error);
             window.showToast('Błąd krytyczny podczas migracji. Sprawdź konsolę.', 5000);
@@ -50,7 +51,6 @@ const Migration = (() => {
     };
 
     return {
-        init
+        init,
     };
-
 })();

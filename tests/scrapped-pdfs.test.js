@@ -42,13 +42,11 @@ describe('ScrappedPdfs', () => {
     });
 
     test('should display links when fetch is successful', async () => {
-        const mockData = [
-            { date: '2023-10-25', type: 'Grafik', title: 'Plan.pdf', url: 'http://example.com/1.pdf' }
-        ];
+        const mockData = [{ date: '2023-10-25', type: 'Grafik', title: 'Plan.pdf', url: 'http://example.com/1.pdf' }];
 
         global.fetch.mockResolvedValue({
             ok: true,
-            json: async () => mockData
+            json: async () => mockData,
         });
 
         await ScrappedPdfs.init();
@@ -74,7 +72,7 @@ describe('ScrappedPdfs', () => {
     test('should handle empty results', async () => {
         global.fetch.mockResolvedValue({
             ok: true,
-            json: async () => []
+            json: async () => [],
         });
 
         await ScrappedPdfs.init();
@@ -85,12 +83,12 @@ describe('ScrappedPdfs', () => {
     test('should filter links based on search input', async () => {
         const mockData = [
             { date: '2023-10-25', type: 'Grafik', title: 'Plan A', url: '#' },
-            { date: '2023-10-26', type: 'Zmiana', title: 'Plan B', url: '#' }
+            { date: '2023-10-26', type: 'Zmiana', title: 'Plan B', url: '#' },
         ];
 
         global.fetch.mockResolvedValue({
             ok: true,
-            json: async () => mockData
+            json: async () => mockData,
         });
 
         await ScrappedPdfs.init();
@@ -106,13 +104,11 @@ describe('ScrappedPdfs', () => {
     });
 
     test('should prevent XSS injection in rendering', async () => {
-        const mockData = [
-            { date: '2023-10-25', type: '<img src=x onerror=alert(1)>', title: '<b>Bold</b>', url: '#' }
-        ];
+        const mockData = [{ date: '2023-10-25', type: '<img src=x onerror=alert(1)>', title: '<b>Bold</b>', url: '#' }];
 
         global.fetch.mockResolvedValue({
             ok: true,
-            json: async () => mockData
+            json: async () => mockData,
         });
 
         await ScrappedPdfs.init();
