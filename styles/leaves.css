@@ -19,7 +19,9 @@
     margin-bottom: -2px;
     font-size: 1em;
     color: var(--color-text-light);
-    transition: color 0.2s, border-color 0.2s;
+    transition:
+        color 0.2s,
+        border-color 0.2s;
 }
 
 .tab-btn:hover {
@@ -203,7 +205,9 @@
 
 .day-cell-calendar {
     cursor: pointer;
-    transition: background-color 0.2s, color 0.2s;
+    transition:
+        background-color 0.2s,
+        color 0.2s;
 }
 
 .day-cell-calendar:hover {
@@ -251,7 +255,7 @@
 .selection-mode-info kbd {
     display: inline-block;
     padding: 3px 8px;
-    font-family: "Consolas", "Monaco", monospace;
+    font-family: 'Consolas', 'Monaco', monospace;
     font-size: 0.9em;
     color: #212529;
     background-color: #f8f9fa;
@@ -381,7 +385,7 @@
     transition: border-color 0.2s ease-in-out;
 }
 
-.leaves-filter-container .filter-checkbox:checked+.legend-color-box {
+.leaves-filter-container .filter-checkbox:checked + .legend-color-box {
     border-color: #333;
     box-shadow: 0 0 0 2px rgba(0, 0, 0, 0.2);
 }

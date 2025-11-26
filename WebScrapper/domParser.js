@@ -12,7 +12,7 @@ function parseDocumentsInBrowser() {
 
     // Filtrujemy tylko istotne węzły: TextNode (nie puste) i Elementy
     // To ułatwia nawigację, bo ignoruje przypadkowe spacje/znaki nowej linii
-    const meaningfulNodes = nodes.filter(node => {
+    const meaningfulNodes = nodes.filter((node) => {
         if (node.nodeType === Node.TEXT_NODE) {
             return node.textContent.trim().length > 0;
         }
@@ -24,7 +24,6 @@ function parseDocumentsInBrowser() {
 
         // Krok 1: Szukamy węzła tekstowego, który zawiera datę
         if (currentNode.nodeType === Node.TEXT_NODE && /\d{4}-\d{2}-\d{2}/.test(currentNode.textContent)) {
-
             // Krok 2: Sprawdzamy sekwencję: Data -> <b>Typ</b> -> <a>Link</a>
             // W meaningfulNodes powinny to być kolejne elementy: i+1 oraz i+2
             const typeNode = meaningfulNodes[i + 1];
@@ -34,11 +33,11 @@ function parseDocumentsInBrowser() {
                 const dateMatch = currentNode.textContent.match(/(\d{4}-\d{2}-\d{2})/);
 
                 if (dateMatch) {
-                     results.push({
+                    results.push({
                         date: dateMatch[0],
                         type: typeNode.innerText ? typeNode.innerText.trim() : typeNode.textContent.trim(),
                         title: linkNode.innerText ? linkNode.innerText.trim() : linkNode.textContent.trim(),
-                        url: linkNode.href
+                        url: linkNode.href,
                     });
                     // Przeskakujemy przetworzone elementy
                     i += 2;

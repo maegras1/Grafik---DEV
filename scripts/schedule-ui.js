@@ -67,11 +67,13 @@ export const ScheduleUI = (() => {
         if (!element || element.classList.contains('break-cell') || element.classList.contains('empty-slot')) return '';
         const clone = element.cloneNode(true);
         const icons = clone.querySelectorAll('.cell-icon');
-        icons.forEach(icon => icon.remove());
+        icons.forEach((icon) => icon.remove());
         const spans = clone.querySelectorAll('span');
         let text = '';
         if (spans.length > 0) {
-            spans.forEach(span => { text += span.textContent + ' ' });
+            spans.forEach((span) => {
+                text += span.textContent + ' ';
+            });
         } else {
             text = clone.textContent;
         }
@@ -108,7 +110,7 @@ export const ScheduleUI = (() => {
         if (displayData.isBreak) {
             cell.textContent = displayData.text;
         } else if (displayData.isSplit) {
-            displayData.parts.forEach(part => {
+            displayData.parts.forEach((part) => {
                 const div = document.createElement('div');
                 div.setAttribute('tabindex', '0');
 
@@ -140,7 +142,7 @@ export const ScheduleUI = (() => {
     };
 
     const refreshAllRowHeights = () => {
-        document.querySelectorAll('#mainScheduleTable tbody tr').forEach(row => {
+        document.querySelectorAll('#mainScheduleTable tbody tr').forEach((row) => {
             row.style.height = 'auto';
         });
     };
@@ -208,7 +210,8 @@ export const ScheduleUI = (() => {
                 if (displayData.text) {
                     cardBody.textContent = displayData.text;
                     if (displayData.classes.length > 0) cardBody.classList.add(...displayData.classes);
-                    if (displayData.styles.backgroundColor) cardBody.style.backgroundColor = displayData.styles.backgroundColor;
+                    if (displayData.styles.backgroundColor)
+                        cardBody.style.backgroundColor = displayData.styles.backgroundColor;
                 } else if (displayData.isSplit) {
                     // Simplified split view for mobile - just stack them
                     const part1 = displayData.parts[0];
@@ -243,7 +246,7 @@ export const ScheduleUI = (() => {
                 isAdmin = true;
                 const allEmployees = EmployeeManager.getAll();
                 employeeIndices = Object.keys(allEmployees)
-                    .filter(id => !allEmployees[id].isHidden)
+                    .filter((id) => !allEmployees[id].isHidden)
                     .sort((a, b) => parseInt(a) - parseInt(b));
                 isSingleUserView = false;
             } else {
@@ -258,7 +261,7 @@ export const ScheduleUI = (() => {
         } else {
             const allEmployees = EmployeeManager.getAll();
             employeeIndices = Object.keys(allEmployees)
-                .filter(id => !allEmployees[id].isHidden)
+                .filter((id) => !allEmployees[id].isHidden)
                 .sort((a, b) => parseInt(a) - parseInt(b));
             isSingleUserView = false;
         }
@@ -274,12 +277,11 @@ export const ScheduleUI = (() => {
         if (mobileContainer) mobileContainer.style.display = 'none';
         mainTable.style.display = 'table';
 
-
         const tableHeaderRow = document.getElementById('tableHeaderRow');
         const tbody = mainTable.querySelector('tbody');
 
         if (!tableHeaderRow || !tbody) {
-            console.error("Table header row or tbody not found, cannot render schedule.");
+            console.error('Table header row or tbody not found, cannot render schedule.');
             return;
         }
 
@@ -350,7 +352,7 @@ export const ScheduleUI = (() => {
             const timeString = `${hours}:${roundedMinutes}`;
 
             // Usuń podświetlenie ze wszystkich wierszy
-            document.querySelectorAll('#mainScheduleTable tbody tr.current-time-row').forEach(row => {
+            document.querySelectorAll('#mainScheduleTable tbody tr.current-time-row').forEach((row) => {
                 row.classList.remove('current-time-row');
             });
 
@@ -388,7 +390,7 @@ export const ScheduleUI = (() => {
         render: renderTable,
         getElementText,
         updatePatientCount,
-        destroy
+        destroy,
     };
 })();
 

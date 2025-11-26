@@ -22,7 +22,7 @@ export const ScrappedPdfs = (() => {
             return;
         }
 
-        linksToDisplay.forEach(linkData => {
+        linksToDisplay.forEach((linkData) => {
             const row = document.createElement('tr');
 
             // Date cell
@@ -87,7 +87,6 @@ export const ScrappedPdfs = (() => {
             }
 
             displayLinks(allLinksData);
-
         } catch (error) {
             console.error('Błąd podczas pobierania linków PDF:', error);
             container.textContent = 'Wystąpił błąd podczas ładowania linków.';
@@ -100,10 +99,11 @@ export const ScrappedPdfs = (() => {
 
         searchInput.addEventListener('input', (e) => {
             const searchTerm = e.target.value.toLowerCase();
-            const filteredLinks = allLinksData.filter(link =>
-                (link.title && link.title.toLowerCase().includes(searchTerm)) ||
-                (link.type && link.type.toLowerCase().includes(searchTerm)) ||
-                (link.date && link.date.toLowerCase().includes(searchTerm))
+            const filteredLinks = allLinksData.filter(
+                (link) =>
+                    (link.title && link.title.toLowerCase().includes(searchTerm)) ||
+                    (link.type && link.type.toLowerCase().includes(searchTerm)) ||
+                    (link.date && link.date.toLowerCase().includes(searchTerm)),
             );
             displayLinks(filteredLinks);
         });
@@ -115,7 +115,9 @@ export const ScrappedPdfs = (() => {
         return fetchPromise;
     };
 
-    const destroy = () => { allLinksData = []; };
+    const destroy = () => {
+        allLinksData = [];
+    };
 
     return { init, destroy };
 })();

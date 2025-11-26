@@ -19,13 +19,13 @@ export const initializeContextMenu = (menuId, targetSelector, itemConfig) => {
             currentTarget = target;
 
             // New: Call onShow for items that have it
-            itemConfig.forEach(item => {
+            itemConfig.forEach((item) => {
                 if (item.onShow) {
                     item.onShow(currentTarget, event);
                 }
             });
 
-            itemConfig.forEach(item => {
+            itemConfig.forEach((item) => {
                 const element = document.getElementById(item.id);
                 if (element) {
                     const shouldShow = item.condition ? item.condition(currentTarget) : true;
@@ -74,7 +74,7 @@ export const initializeContextMenu = (menuId, targetSelector, itemConfig) => {
     };
 
     const itemClickHandlers = new Map();
-    itemConfig.forEach(item => {
+    itemConfig.forEach((item) => {
         const element = document.getElementById(item.id);
         if (element) {
             const handler = () => {
@@ -105,7 +105,7 @@ export const initializeContextMenu = (menuId, targetSelector, itemConfig) => {
                     cancelable: true,
                     view: window,
                     clientX: event.touches[0].clientX,
-                    clientY: event.touches[0].clientY
+                    clientY: event.touches[0].clientY,
                 });
                 target.dispatchEvent(contextMenuEvent);
             }, LONG_PRESS_DURATION);
@@ -133,7 +133,7 @@ export const initializeContextMenu = (menuId, targetSelector, itemConfig) => {
         handleContextMenu,
         handleClickOutside,
         itemClickHandlers,
-        itemConfig
+        itemConfig,
     };
 };
 
@@ -142,7 +142,7 @@ export const destroyContextMenu = (menuId) => {
     if (instance) {
         document.removeEventListener('contextmenu', instance.handleContextMenu);
         document.removeEventListener('click', instance.handleClickOutside);
-        instance.itemConfig.forEach(item => {
+        instance.itemConfig.forEach((item) => {
             const element = document.getElementById(item.id);
             const handler = instance.itemClickHandlers.get(item.id);
             if (element && handler) {

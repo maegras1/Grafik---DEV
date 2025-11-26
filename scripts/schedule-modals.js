@@ -3,7 +3,6 @@ import { EmployeeManager } from './employee-manager.js';
 import { ScheduleUI } from './schedule-ui.js';
 
 export const ScheduleModals = (() => {
-
     const showDuplicateConfirmationDialog = (duplicateInfo, onMove, onAdd, onCancel) => {
         const modal = document.getElementById('duplicateModal');
         const modalText = document.getElementById('duplicateModalText');
@@ -22,8 +21,14 @@ export const ScheduleModals = (() => {
             cancelBtn.onclick = null;
         };
 
-        moveBtn.onclick = () => { closeAndCleanup(); onMove(); };
-        addBtn.onclick = () => { closeAndCleanup(); onAdd(); };
+        moveBtn.onclick = () => {
+            closeAndCleanup();
+            onMove();
+        };
+        addBtn.onclick = () => {
+            closeAndCleanup();
+            onAdd();
+        };
         cancelBtn.onclick = () => {
             closeAndCleanup();
             if (onCancel) onCancel();
@@ -45,14 +50,20 @@ export const ScheduleModals = (() => {
             cancelBtn.onclick = null;
         };
 
-        confirmBtn.onclick = () => { closeAndCleanup(); onConfirm(); };
-        cancelBtn.onclick = () => { closeAndCleanup(); onCancel(); };
+        confirmBtn.onclick = () => {
+            closeAndCleanup();
+            onConfirm();
+        };
+        cancelBtn.onclick = () => {
+            closeAndCleanup();
+            onCancel();
+        };
     };
 
     const openPatientInfoModal = (element, cellState, updateCellStateCallback) => {
         const patientName = ScheduleUI.getElementText(element);
         if (!patientName) {
-            window.showToast("Brak pacjenta w tej komórce.", 3000);
+            window.showToast('Brak pacjenta w tej komórce.', 3000);
             return;
         }
 
@@ -82,7 +93,7 @@ export const ScheduleModals = (() => {
         } else {
             treatmentData = {
                 startDate: cellState.treatmentStartDate,
-                extensionDays: cellState.treatmentExtensionDays
+                extensionDays: cellState.treatmentExtensionDays,
             };
             currentAdditionalInfo = cellState.additionalInfo || '';
         }
@@ -130,10 +141,10 @@ export const ScheduleModals = (() => {
                 startDate: startDateInput.value,
                 extensionDays: parseInt(extensionDaysInput.value, 10),
                 endDate: endDateInput.value,
-                additionalInfo: additionalInfoTextarea.value
+                additionalInfo: additionalInfoTextarea.value,
             };
 
-            updateCellStateCallback(state => {
+            updateCellStateCallback((state) => {
                 if (isSplitPart) {
                     const dataKey = `treatmentData${partIndex}`;
                     state[dataKey] = newTreatmentData;
@@ -144,7 +155,7 @@ export const ScheduleModals = (() => {
                     state.additionalInfo = newTreatmentData.additionalInfo;
                 }
             });
-            window.showToast("Zapisano daty zabiegów i informacje o pacjencie.");
+            window.showToast('Zapisano daty zabiegów i informacje o pacjencie.');
             closeModal();
         };
 
@@ -172,7 +183,9 @@ export const ScheduleModals = (() => {
         } else {
             modalBody.innerHTML = `
                 <ul class="history-list">
-                    ${cellState.history.map(entry => `
+                    ${cellState.history
+                        .map(
+                            (entry) => `
                         <li class="history-item">
                             <div class="history-value">${entry.oldValue || '(pusty)'}</div>
                             <div class="history-meta">
@@ -181,15 +194,17 @@ export const ScheduleModals = (() => {
                             </div>
                             <button class="action-btn revert-btn" data-value="${entry.oldValue}">Przywróć</button>
                         </li>
-                    `).join('')}
+                    `,
+                        )
+                        .join('')}
                 </ul>
             `;
         }
 
-        modalBody.querySelectorAll('.revert-btn').forEach(btn => {
+        modalBody.querySelectorAll('.revert-btn').forEach((btn) => {
             btn.addEventListener('click', () => {
                 const valueToRevert = btn.dataset.value;
-                updateCellStateCallback(state => {
+                updateCellStateCallback((state) => {
                     if (valueToRevert.includes('/')) {
                         const parts = valueToRevert.split('/', 2);
                         state.isSplit = true;
@@ -224,7 +239,7 @@ export const ScheduleModals = (() => {
     };
 
     const openEmployeeSelectionModal = () => {
-        window.showToast("Funkcja wyboru pracownika nie jest jeszcze zaimplementowana.");
+        window.showToast('Funkcja wyboru pracownika nie jest jeszcze zaimplementowana.');
     };
 
     return {
@@ -232,7 +247,7 @@ export const ScheduleModals = (() => {
         showNumericConfirmationDialog,
         openPatientInfoModal,
         showHistoryModal,
-        openEmployeeSelectionModal
+        openEmployeeSelectionModal,
     };
 })();
 

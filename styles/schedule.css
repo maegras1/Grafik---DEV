@@ -92,8 +92,8 @@
     box-shadow: inset 0 0 0 2px var(--bg-active);
 }
 
-.schedule-table td[contenteditable="true"],
-.schedule-table div[contenteditable="true"] {
+.schedule-table td[contenteditable='true'],
+.schedule-table div[contenteditable='true'] {
     background-color: var(--color-white);
     box-shadow: inset 0 0 0 2px var(--color-secondary);
 }
@@ -109,19 +109,19 @@
 }
 
 .pnf-text,
-td.split-cell>div.pnf-text>span {
+td.split-cell > div.pnf-text > span {
     color: var(--bg-pnf);
     font-weight: bold;
 }
 
 .massage-text,
-td.split-cell>div.massage-text>span {
+td.split-cell > div.massage-text > span {
     color: var(--bg-massage);
     font-weight: bold;
 }
 
 .every-other-day-text,
-td.split-cell>div.every-other-day-text>span {
+td.split-cell > div.every-other-day-text > span {
     color: var(--bg-every-other-day);
     font-weight: bold;
 }
@@ -231,7 +231,7 @@ td.split-cell {
     padding: 0;
 }
 
-td.split-cell>div {
+td.split-cell > div {
     flex: 1;
     display: flex;
     align-items: center;
@@ -247,7 +247,7 @@ td.split-cell>div {
     color: var(--color-text);
 }
 
-td.split-cell>div:first-child {
+td.split-cell > div:first-child {
     border-right: 1px solid var(--color-border-dark);
 }
 
@@ -261,14 +261,14 @@ td.split-cell>div:first-child {
     box-shadow: inset 0 0 0 2px var(--color-secondary);
 }
 
-.schedule-table tbody tr.current-time-row>td {
+.schedule-table tbody tr.current-time-row > td {
     background-color: #fffde7;
     /* Jasnożółte tło */
     font-weight: bold;
 }
 
 td.current-time-highlight {
-    background-color: #FFFF00;
+    background-color: #ffff00;
     font-weight: bold;
 }
 
@@ -277,8 +277,8 @@ td.current-time-highlight {
 }
 
 .treatment-end-marker::after {
-    content: "\f0f3";
-    font-family: "Font Awesome 5 Free";
+    content: '\f0f3';
+    font-family: 'Font Awesome 5 Free';
     font-weight: 900;
     position: absolute;
     top: 2px;
@@ -289,7 +289,6 @@ td.current-time-highlight {
 }
 
 @keyframes bell-ring {
-
     0%,
     50%,
     100% {
@@ -335,7 +334,9 @@ td.current-time-highlight {
     max-width: 500px;
     border-radius: var(--border-radius);
     text-align: left;
-    box-shadow: 0 4px 8px 0 rgba(0, 0, 0, 0.2), 0 6px 20px 0 rgba(0, 0, 0, 0.19);
+    box-shadow:
+        0 4px 8px 0 rgba(0, 0, 0, 0.2),
+        0 6px 20px 0 rgba(0, 0, 0, 0.19);
 }
 
 .modal-buttons {
@@ -357,7 +358,7 @@ td.current-time-highlight {
 }
 
 #addAnywayBtn {
-    background-color: #008CBA;
+    background-color: #008cba;
     color: white;
 }
 
@@ -387,7 +388,9 @@ td.current-time-highlight {
         box-shadow: var(--shadow-sm);
         border: 1px solid var(--color-gray-200);
         overflow: hidden;
-        transition: transform 0.2s, box-shadow 0.2s;
+        transition:
+            transform 0.2s,
+            box-shadow 0.2s;
     }
 
     .appointment-card:active {
@@ -512,12 +515,12 @@ td.current-time-highlight {
     margin-right: 5px;
 }
 
-.patient-name-row input[type="text"] {
+.patient-name-row input[type='text'] {
     flex-grow: 1;
     min-width: 150px;
 }
 
-.gender-options input[type="radio"] {
+.gender-options input[type='radio'] {
     margin-right: 5px;
 }
 
@@ -525,18 +528,18 @@ td.current-time-highlight {
 .gender-icon {
     display: inline-block;
     margin-left: 8px;
-    font-family: "Font Awesome 5 Free";
+    font-family: 'Font Awesome 5 Free';
     font-weight: 900;
     font-size: 0.9em;
     vertical-align: middle;
 }
 
 .gender-icon.male::before {
-    content: "\f222";
+    content: '\f222';
     color: var(--color-secondary);
 }
 
 .gender-icon.female::before {
-    content: "\f221";
+    content: '\f221';
     color: var(--bg-massage);
 }

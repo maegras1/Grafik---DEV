@@ -53,7 +53,10 @@
     /* Domyślnie nieaktywny kursor */
     padding: 5px;
     border-radius: 5px;
-    transition: background-color 0.2s ease, color 0.2s ease, cursor 0.2s ease;
+    transition:
+        background-color 0.2s ease,
+        color 0.2s ease,
+        cursor 0.2s ease;
 }
 
 .action-icon-btn.active {
@@ -95,7 +98,10 @@
     background-color: rgba(255, 255, 255, 0.15);
     /* Glassy effect */
     color: var(--color-white);
-    transition: width 0.3s ease, background-color 0.3s, opacity 0.3s;
+    transition:
+        width 0.3s ease,
+        background-color 0.3s,
+        opacity 0.3s;
     width: 0;
     /* Hidden by default */
     opacity: 0;
@@ -251,7 +257,9 @@
     color: #f0f0f0;
     text-decoration: none;
     font-size: 1.1em;
-    transition: background-color 0.2s, border-left-color 0.2s;
+    transition:
+        background-color 0.2s,
+        border-left-color 0.2s;
     /* Dodaj transition dla border-left-color */
     border-left: 5px solid transparent;
     /* Niewidoczne obramowanie po lewej */
@@ -293,7 +301,6 @@
 
 /* Responsive Design */
 @media (max-width: 768px) {
-
     .date-time-text {
         display: none;
     }
@@ -319,7 +326,9 @@
         z-index: 2000;
         /* Ensure it's above everything */
         color: white;
-        transition: transform 0.2s, background-color 0.2s;
+        transition:
+            transform 0.2s,
+            background-color 0.2s;
     }
 
     .hamburger-menu:active {

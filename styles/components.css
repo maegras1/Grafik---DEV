@@ -32,7 +32,9 @@
     cursor: pointer;
     margin-left: var(--spacing-sm);
     font-weight: 600;
-    transition: background-color 0.2s, transform 0.1s;
+    transition:
+        background-color 0.2s,
+        transform 0.1s;
     box-shadow: var(--shadow-sm);
 }
 
@@ -58,7 +60,6 @@
 .cancel-btn:hover {
     background-color: #fef2f2;
 }
-
 
 /* --- Kalendarz Modal --- */
 .modal-overlay {
@@ -109,7 +110,9 @@
     cursor: pointer;
     font-weight: bold;
     color: var(--color-text);
-    transition: background-color 0.2s, box-shadow 0.2s;
+    transition:
+        background-color 0.2s,
+        box-shadow 0.2s;
 }
 
 .nav-btn:hover {
@@ -150,7 +153,10 @@
     cursor: pointer;
     border-radius: 50%;
     border: 2px solid transparent;
-    transition: background-color 0.2s, color 0.2s, border-color 0.2s;
+    transition:
+        background-color 0.2s,
+        color 0.2s,
+        border-color 0.2s;
 }
 
 .day-cell-calendar:hover {
@@ -208,7 +214,6 @@
     text-align: right;
 }
 
-
 /* --- Style dla przeciągania i upuszczania --- */
 .is-dragging {
     opacity: 0.4;
@@ -219,7 +224,6 @@
     background-color: #d1ffd1 !important;
     border: 2px dashed var(--color-primary);
 }
-
 
 /* --- Pole wyszukiwania --- */
 .search-input {
@@ -296,8 +300,8 @@
     color: var(--color-text-light);
 }
 
-.modal-body input[type="text"],
-.modal-body input[type="date"] {
+.modal-body input[type='text'],
+.modal-body input[type='date'] {
     width: 100%;
     padding: 8px;
     border: 1px solid #ccc;

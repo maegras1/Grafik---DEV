@@ -8,11 +8,34 @@ import { CalendarModal } from './calendar-modal.js';
 
 export const Leaves = (() => {
     // --- SELEKTORY I ZMIENNE GLOBALNE ---
-    let loadingOverlay, leavesTableBody, leavesHeaderRow, searchInput, clearSearchBtn,
-        monthlyViewBtn, summaryViewBtn, careViewBtn, monthlyViewContainer, careViewContainer,
-        clearFiltersBtn, leavesFilterContainer, yearSelect;
+    let loadingOverlay,
+        leavesTableBody,
+        leavesHeaderRow,
+        searchInput,
+        clearSearchBtn,
+        monthlyViewBtn,
+        summaryViewBtn,
+        careViewBtn,
+        monthlyViewContainer,
+        careViewContainer,
+        clearFiltersBtn,
+        leavesFilterContainer,
+        yearSelect;
 
-    const months = ["Styczeń", "Luty", "Marzec", "Kwiecień", "Maj", "Czerwiec", "Lipiec", "Sierpień", "Wrzesień", "Październik", "Listopad", "Grudzień"];
+    const months = [
+        'Styczeń',
+        'Luty',
+        'Marzec',
+        'Kwiecień',
+        'Maj',
+        'Czerwiec',
+        'Lipiec',
+        'Sierpień',
+        'Wrzesień',
+        'Październik',
+        'Listopad',
+        'Grudzień',
+    ];
 
     let currentYear = new Date().getUTCFullYear();
     let activeCell = null;
@@ -22,7 +45,7 @@ export const Leaves = (() => {
     const _handleAppSearch = (e) => {
         const { searchTerm } = e.detail;
         const lowerCaseSearchTerm = searchTerm.toLowerCase();
-        document.querySelectorAll('#leavesTableBody tr').forEach(row => {
+        document.querySelectorAll('#leavesTableBody tr').forEach((row) => {
             row.style.display = row.dataset.employee.toLowerCase().includes(lowerCaseSearchTerm) ? '' : 'none';
         });
     };
@@ -64,22 +87,25 @@ export const Leaves = (() => {
                 nextElement = currentRow.cells[currentIndexInRow + 1];
                 break;
             case 'ArrowLeft':
-                if (currentIndexInRow > 1) { // Blokada przed przejściem na komórkę z nazwą pracownika
+                if (currentIndexInRow > 1) {
+                    // Blokada przed przejściem na komórkę z nazwą pracownika
                     nextElement = currentRow.cells[currentIndexInRow - 1];
                 }
                 break;
-            case 'ArrowDown':
+            case 'ArrowDown': {
                 const nextRow = currentRow.nextElementSibling;
                 if (nextRow) {
                     nextElement = nextRow.cells[currentIndexInRow];
                 }
                 break;
-            case 'ArrowUp':
+            }
+            case 'ArrowUp': {
                 const prevRow = currentRow.previousElementSibling;
                 if (prevRow) {
                     nextElement = prevRow.cells[currentIndexInRow];
                 }
                 break;
+            }
         }
 
         if (nextElement && nextElement.classList.contains('day-cell')) {
@@ -106,7 +132,6 @@ export const Leaves = (() => {
         }
     };
 
-
     // --- FUNKCJE POMOCNICZE UTC ---
     const toUTCDate = (dateString) => {
         const [year, month, day] = dateString.split('-').map(Number);
@@ -121,7 +146,7 @@ export const Leaves = (() => {
     const populateYearSelect = () => {
         const currentYear = new Date().getUTCFullYear();
         const startYear = currentYear - 5; // 5 years back
-        const endYear = currentYear + 5;   // 5 years forward
+        const endYear = currentYear + 5; // 5 years forward
 
         yearSelect.innerHTML = ''; // Clear existing options
 
@@ -147,14 +172,14 @@ export const Leaves = (() => {
 
         // Jeśli activeFilters jest puste, zainicjuj je wszystkimi typami urlopów
         if (activeFilters.size === 0) {
-            Array.from(leaveTypeSelect.options).forEach(option => {
+            Array.from(leaveTypeSelect.options).forEach((option) => {
                 activeFilters.add(option.value);
             });
         }
 
         legendContainer.innerHTML = '<strong>Filtruj wg typu:</strong>'; // Wyczyść kontener przed ponownym generowaniem
 
-        Array.from(leaveTypeSelect.options).forEach(option => {
+        Array.from(leaveTypeSelect.options).forEach((option) => {
             const key = option.value;
             const color = AppConfig.leaves.leaveTypeColors[key] || AppConfig.leaves.leaveTypeColors.default;
 
@@ -215,13 +240,12 @@ export const Leaves = (() => {
             // --- Inicjalizacja Menu Kontekstowego ---
             const contextMenuItems = [
                 { id: 'contextOpenCalendar', action: (cell) => openCalendarForCell(cell) },
-                { id: 'contextClearCell', action: (cell) => clearCellLeaves(cell) }
+                { id: 'contextClearCell', action: (cell) => clearCellLeaves(cell) },
             ];
             window.initializeContextMenu('contextMenu', '.day-cell', contextMenuItems);
-
         } catch (error) {
-            console.error("Błąd inicjalizacji strony urlopów:", error);
-            window.showToast("Wystąpił krytyczny błąd inicjalizacji. Odśwież stronę.", 5000);
+            console.error('Błąd inicjalizacji strony urlopów:', error);
+            window.showToast('Wystąpił krytyczny błąd inicjalizacji. Odśwież stronę.', 5000);
         } finally {
             if (loadingOverlay) hideLoadingOverlay(loadingOverlay);
         }
@@ -242,7 +266,7 @@ export const Leaves = (() => {
             window.destroyContextMenu('contextMenu');
         }
         activeCell = null;
-        console.log("Leaves module destroyed");
+        console.log('Leaves module destroyed');
     };
 
     const openCalendarForCell = async (cell) => {
@@ -258,8 +282,8 @@ export const Leaves = (() => {
             await saveLeavesData(employeeName, updatedLeaves);
             renderSingleEmployeeLeaves(employeeName, updatedLeaves);
         } catch (error) {
-            console.log("Operacja w kalendarzu została anulowana.", error);
-            window.showToast("Anulowano zmiany.", 2000);
+            console.log('Operacja w kalendarzu została anulowana.', error);
+            window.showToast('Anulowano zmiany.', 2000);
         }
     };
 
@@ -271,7 +295,8 @@ export const Leaves = (() => {
         leavesTableBody.addEventListener('click', _handleTableClick);
         document.addEventListener('keydown', _handleKeyDown);
         document.addEventListener('app:search', _handleAppSearch);
-        if (clearFiltersBtn) { // Dodaj sprawdzenie istnienia elementu
+        if (clearFiltersBtn) {
+            // Dodaj sprawdzenie istnienia elementu
             clearFiltersBtn.addEventListener('click', handleClearFilters);
         }
     };
@@ -327,7 +352,7 @@ export const Leaves = (() => {
 
     const generateTableHeaders = () => {
         leavesHeaderRow.innerHTML = `<th>Pracownik / ${currentYear}</th>`;
-        months.forEach(month => {
+        months.forEach((month) => {
             const th = document.createElement('th');
             th.textContent = month;
             leavesHeaderRow.appendChild(th);
@@ -337,11 +362,11 @@ export const Leaves = (() => {
     const generateTableRows = (employees) => {
         leavesTableBody.innerHTML = '';
         const sortedEmployeeNames = Object.values(employees)
-            .filter(emp => !emp.isHidden)
-            .map(emp => emp.displayName || emp.name)
+            .filter((emp) => !emp.isHidden)
+            .map((emp) => emp.displayName || emp.name)
             .filter(Boolean)
             .sort();
-        sortedEmployeeNames.forEach(name => {
+        sortedEmployeeNames.forEach((name) => {
             const tr = document.createElement('tr');
             tr.dataset.employee = name;
             const nameTd = document.createElement('td');
@@ -361,19 +386,24 @@ export const Leaves = (() => {
 
     const getAllLeavesData = async () => {
         try {
-            const docRef = db.collection(AppConfig.firestore.collections.leaves).doc(AppConfig.firestore.docs.mainLeaves);
+            const docRef = db
+                .collection(AppConfig.firestore.collections.leaves)
+                .doc(AppConfig.firestore.docs.mainLeaves);
             const doc = await docRef.get();
             return doc.exists ? doc.data() : {};
         } catch (error) {
-            console.error("Błąd podczas ładowania danych o urlopach z Firestore:", error);
-            window.showToast("Wystąpił błąd podczas ładowania danych o urlopach. Spróbuj ponownie.", 5000);
+            console.error('Błąd podczas ładowania danych o urlopach z Firestore:', error);
+            window.showToast('Wystąpił błąd podczas ładowania danych o urlopach. Spróbuj ponownie.', 5000);
             return {};
         }
     };
 
     const saveLeavesData = async (employeeName, leaves) => {
         try {
-            await db.collection(AppConfig.firestore.collections.leaves).doc(AppConfig.firestore.docs.mainLeaves).set({ [employeeName]: leaves }, { merge: true });
+            await db
+                .collection(AppConfig.firestore.collections.leaves)
+                .doc(AppConfig.firestore.docs.mainLeaves)
+                .set({ [employeeName]: leaves }, { merge: true });
             window.showToast('Urlopy zapisane pomyślnie.', 2000);
         } catch (error) {
             console.error('Błąd podczas zapisu urlopów do Firestore:', error);
@@ -382,7 +412,7 @@ export const Leaves = (() => {
     };
 
     const renderAllEmployeeLeaves = (allLeaves) => {
-        Object.keys(allLeaves).forEach(employeeName => {
+        Object.keys(allLeaves).forEach((employeeName) => {
             renderSingleEmployeeLeaves(employeeName, allLeaves[employeeName] || []);
         });
     };
@@ -390,11 +420,13 @@ export const Leaves = (() => {
     const renderSingleEmployeeLeaves = (employeeName, leaves) => {
         const employeeRow = leavesTableBody.querySelector(`tr[data-employee="${employeeName}"]`);
         if (!employeeRow) return;
-        employeeRow.querySelectorAll('.day-cell').forEach(cell => { cell.innerHTML = ''; });
+        employeeRow.querySelectorAll('.day-cell').forEach((cell) => {
+            cell.innerHTML = '';
+        });
 
-        const filteredLeaves = leaves.filter(leave => activeFilters.has(leave.type || 'vacation'));
+        const filteredLeaves = leaves.filter((leave) => activeFilters.has(leave.type || 'vacation'));
 
-        filteredLeaves.forEach(leave => {
+        filteredLeaves.forEach((leave) => {
             if (!leave.id || !leave.startDate || !leave.endDate) return;
 
             const bgColor = AppConfig.leaves.leaveTypeColors[leave.type] || AppConfig.leaves.leaveTypeColors.default;
@@ -411,7 +443,9 @@ export const Leaves = (() => {
                     const monthEnd = new Date(Math.min(end, Date.UTC(currentYear, currentMonth + 1, 0)));
                     const div = document.createElement('div');
                     div.classList.add('leave-block');
-                    const leaveTypeName = document.querySelector(`#leaveTypeSelect option[value="${leave.type || 'vacation'}"]`).textContent;
+                    const leaveTypeName = document.querySelector(
+                        `#leaveTypeSelect option[value="${leave.type || 'vacation'}"]`,
+                    ).textContent;
                     div.setAttribute('title', leaveTypeName);
                     div.style.backgroundColor = bgColor;
                     let text = '';
@@ -433,7 +467,7 @@ export const Leaves = (() => {
         try {
             const allLeaves = await getAllLeavesData();
             const employeeLeaves = allLeaves[employeeName] || [];
-            const remainingLeaves = employeeLeaves.filter(leave => {
+            const remainingLeaves = employeeLeaves.filter((leave) => {
                 const start = toUTCDate(leave.startDate);
                 const end = toUTCDate(leave.endDate);
                 return end.getUTCMonth() < monthToClear || start.getUTCMonth() > monthToClear;
@@ -441,14 +475,14 @@ export const Leaves = (() => {
             await saveLeavesData(employeeName, remainingLeaves);
             renderSingleEmployeeLeaves(employeeName, remainingLeaves);
         } catch (error) {
-            console.error("Błąd podczas czyszczenia urlopów w komórce:", error);
-            window.showToast("Wystąpił błąd podczas czyszczenia urlopów. Spróbuj ponownie.", 5000);
+            console.error('Błąd podczas czyszczenia urlopów w komórce:', error);
+            window.showToast('Wystąpił błąd podczas czyszczenia urlopów. Spróbuj ponownie.', 5000);
         }
     };
 
     return {
         init,
-        destroy
+        destroy,
     };
 })();
 

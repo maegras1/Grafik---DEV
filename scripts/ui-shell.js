@@ -206,7 +206,7 @@ export const UIShell = (() => {
         loadPage,
         updateUserState, // Eksportuj nową metodę
         showLoading,
-        hideLoading
+        hideLoading,
     };
 })();
 

@@ -2,7 +2,6 @@
 import { AppConfig, capitalizeFirstLetter } from './common.js';
 
 export const ScheduleLogic = (() => {
-
     const getCellDisplayData = (cellData) => {
         const result = {
             text: '',
@@ -10,7 +9,7 @@ export const ScheduleLogic = (() => {
             styles: {},
             isSplit: false,
             parts: [],
-            isBreak: false
+            isBreak: false,
         };
 
         if (!cellData) return result;
@@ -35,7 +34,7 @@ export const ScheduleLogic = (() => {
                     classes: [],
                     isMassage: !!isMassage,
                     isPnf: !!isPnf,
-                    isEveryOtherDay: !!isEveryOtherDay
+                    isEveryOtherDay: !!isEveryOtherDay,
                 };
 
                 if (isMassage) part.classes.push('massage-text');
@@ -45,21 +44,25 @@ export const ScheduleLogic = (() => {
                 return part;
             };
 
-            result.parts.push(createPartData(
-                cellData.content1,
-                cellData.isMassage1,
-                cellData.isPnf1,
-                cellData.isEveryOtherDay1,
-                cellData.treatmentData1?.gender
-            ));
+            result.parts.push(
+                createPartData(
+                    cellData.content1,
+                    cellData.isMassage1,
+                    cellData.isPnf1,
+                    cellData.isEveryOtherDay1,
+                    cellData.treatmentData1?.gender,
+                ),
+            );
 
-            result.parts.push(createPartData(
-                cellData.content2,
-                cellData.isMassage2,
-                cellData.isPnf2,
-                cellData.isEveryOtherDay2,
-                cellData.treatmentData2?.gender
-            ));
+            result.parts.push(
+                createPartData(
+                    cellData.content2,
+                    cellData.isMassage2,
+                    cellData.isPnf2,
+                    cellData.isEveryOtherDay2,
+                    cellData.treatmentData2?.gender,
+                ),
+            );
 
             // Treatment End Markers for Split
             const today = new Date().toISOString().split('T')[0];
@@ -99,9 +102,9 @@ export const ScheduleLogic = (() => {
         let count = 0;
         if (!scheduleCells) return 0;
 
-        Object.values(scheduleCells).forEach(employeeCells => {
+        Object.values(scheduleCells).forEach((employeeCells) => {
             if (!employeeCells) return;
-            Object.values(employeeCells).forEach(cell => {
+            Object.values(employeeCells).forEach((cell) => {
                 if (cell.isBreak) return;
 
                 if (cell.isSplit) {
@@ -117,6 +120,6 @@ export const ScheduleLogic = (() => {
 
     return {
         getCellDisplayData,
-        calculatePatientCount
+        calculatePatientCount,
     };
 })();
