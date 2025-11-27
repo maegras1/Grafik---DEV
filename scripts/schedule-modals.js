@@ -12,7 +12,7 @@ export const ScheduleModals = (() => {
 
         const employeeName = EmployeeManager.getNameById(duplicateInfo.employeeIndex);
         modalText.innerHTML = `Znaleziono identyczny wpis dla "<b>${employeeName}</b>" o godzinie ${duplicateInfo.time}. Co chcesz zrobić?`;
-        modal.style.display = 'block';
+        modal.style.display = 'flex';
 
         const closeAndCleanup = () => {
             modal.style.display = 'none';
@@ -184,8 +184,8 @@ export const ScheduleModals = (() => {
             modalBody.innerHTML = `
                 <ul class="history-list">
                     ${cellState.history
-                        .map(
-                            (entry) => `
+                    .map(
+                        (entry) => `
                         <li class="history-item">
                             <div class="history-value">${entry.oldValue || '(pusty)'}</div>
                             <div class="history-meta">
@@ -195,8 +195,8 @@ export const ScheduleModals = (() => {
                             <button class="action-btn revert-btn" data-value="${entry.oldValue}">Przywróć</button>
                         </li>
                     `,
-                        )
-                        .join('')}
+                    )
+                    .join('')}
                 </ul>
             `;
         }

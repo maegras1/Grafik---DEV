@@ -540,9 +540,39 @@ export const ScheduleEvents = (() => {
                 id: 'contextSplitCell',
                 action: (cell) =>
                     _dependencies.updateCellState(cell, (state) => {
+                        // Migrate content
                         state.content1 = state.content || '';
                         state.content2 = '';
                         delete state.content;
+
+                        // Migrate flags
+                        if (state.isMassage) {
+                            state.isMassage1 = true;
+                            delete state.isMassage;
+                        }
+                        if (state.isPnf) {
+                            state.isPnf1 = true;
+                            delete state.isPnf;
+                        }
+                        if (state.isEveryOtherDay) {
+                            state.isEveryOtherDay1 = true;
+                            delete state.isEveryOtherDay;
+                        }
+
+                        // Migrate treatment data
+                        state.treatmentData1 = {
+                            startDate: state.treatmentStartDate,
+                            extensionDays: state.treatmentExtensionDays,
+                            endDate: state.treatmentEndDate,
+                            additionalInfo: state.additionalInfo,
+                        };
+
+                        // Clean up old treatment data
+                        delete state.treatmentStartDate;
+                        delete state.treatmentExtensionDays;
+                        delete state.treatmentEndDate;
+                        delete state.additionalInfo;
+
                         state.isSplit = true;
                         window.showToast('Podzielono komórkę');
                     }),
@@ -574,9 +604,39 @@ export const ScheduleEvents = (() => {
         document.getElementById('btnSplitCell')?.addEventListener('click', () => {
             if (activeCell) {
                 _dependencies.updateCellState(activeCell, (state) => {
+                    // Migrate content
                     state.content1 = state.content || '';
                     state.content2 = '';
                     delete state.content;
+
+                    // Migrate flags
+                    if (state.isMassage) {
+                        state.isMassage1 = true;
+                        delete state.isMassage;
+                    }
+                    if (state.isPnf) {
+                        state.isPnf1 = true;
+                        delete state.isPnf;
+                    }
+                    if (state.isEveryOtherDay) {
+                        state.isEveryOtherDay1 = true;
+                        delete state.isEveryOtherDay;
+                    }
+
+                    // Migrate treatment data
+                    state.treatmentData1 = {
+                        startDate: state.treatmentStartDate,
+                        extensionDays: state.treatmentExtensionDays,
+                        endDate: state.treatmentEndDate,
+                        additionalInfo: state.additionalInfo,
+                    };
+
+                    // Clean up old treatment data
+                    delete state.treatmentStartDate;
+                    delete state.treatmentExtensionDays;
+                    delete state.treatmentEndDate;
+                    delete state.additionalInfo;
+
                     state.isSplit = true;
                     window.showToast('Podzielono komórkę');
                 });
