@@ -20,7 +20,8 @@ export const Leaves = (() => {
         careViewContainer,
         clearFiltersBtn,
         leavesFilterContainer,
-        yearSelect;
+        yearSelect,
+        currentYearBtn;
 
     const months = [
         'Styczeń',
@@ -192,12 +193,8 @@ export const Leaves = (() => {
             legendContainer.appendChild(filterItem);
         });
 
-        // Usuń poprzednie nasłuchiwacze, aby uniknąć wielokrotnego przypisania
-        const oldLegendContainer = legendContainer.cloneNode(true);
-        legendContainer.parentNode.replaceChild(oldLegendContainer, legendContainer);
-        const newLegendContainer = document.getElementById('leavesLegend');
-
-        newLegendContainer.addEventListener('change', async (e) => {
+        // Use a named function for the event listener to avoid duplication issues
+        const handleFilterChange = async (e) => {
             if (e.target.classList.contains('filter-checkbox')) {
                 if (e.target.checked) {
                     activeFilters.add(e.target.value);
@@ -207,7 +204,22 @@ export const Leaves = (() => {
                 const allLeaves = await getAllLeavesData();
                 renderAllEmployeeLeaves(allLeaves);
             }
-        });
+        };
+
+        // Remove existing listener if any (though we are replacing the container content, 
+        // it's safer to attach to the container which persists or is re-queried)
+        // Since we are clearing innerHTML, we lose the listeners on children, but the container itself is stable?
+        // Actually, in the original code, we were cloning the container to remove listeners.
+        // Let's stick to a simpler approach: just add the listener to the container once in init, 
+        // or ensure we don't add it multiple times.
+
+        // Better approach: Attach listener to leavesFilterContainer ONCE in init, and delegate.
+        // But here we are inside generateLegendAndFilters which might be called multiple times.
+        // Let's check if we already attached the listener.
+        if (!legendContainer.hasAttribute('data-listener-attached')) {
+            legendContainer.addEventListener('change', handleFilterChange);
+            legendContainer.setAttribute('data-listener-attached', 'true');
+        }
     };
 
     const init = async () => {
@@ -223,7 +235,8 @@ export const Leaves = (() => {
         monthlyViewContainer = document.getElementById('leavesTable');
         careViewContainer = document.getElementById('careViewContainer');
         leavesFilterContainer = document.getElementById('leavesFilterContainer');
-        yearSelect = document.getElementById('yearSelect'); // Inicjalizuj yearSelect
+        yearSelect = document.getElementById('yearSelect');
+        currentYearBtn = document.getElementById('currentYearBtn');
 
         // Inicjalizacja modułów zależnych
         CalendarModal.init();
@@ -236,6 +249,7 @@ export const Leaves = (() => {
             clearFiltersBtn = document.getElementById('clearFiltersBtn');
             setupEventListeners();
             await showMonthlyView();
+            highlightCurrentMonth();
 
             // --- Inicjalizacja Menu Kontekstowego ---
             const contextMenuItems = [
@@ -260,7 +274,8 @@ export const Leaves = (() => {
         document.removeEventListener('keydown', _handleKeyDown);
         document.removeEventListener('app:search', _handleAppSearch);
         clearFiltersBtn.removeEventListener('click', handleClearFilters);
-        yearSelect.removeEventListener('change', handleYearChange); // Remove yearSelect listener
+        yearSelect.removeEventListener('change', handleYearChange);
+        if (currentYearBtn) currentYearBtn.removeEventListener('click', handleCurrentYearClick);
 
         if (window.destroyContextMenu) {
             window.destroyContextMenu('contextMenu');
@@ -296,8 +311,10 @@ export const Leaves = (() => {
         document.addEventListener('keydown', _handleKeyDown);
         document.addEventListener('app:search', _handleAppSearch);
         if (clearFiltersBtn) {
-            // Dodaj sprawdzenie istnienia elementu
             clearFiltersBtn.addEventListener('click', handleClearFilters);
+        }
+        if (currentYearBtn) {
+            currentYearBtn.addEventListener('click', handleCurrentYearClick);
         }
     };
 
@@ -322,6 +339,38 @@ export const Leaves = (() => {
         generateTableRows(employees);
         const allLeaves = await getAllLeavesData();
         renderAllEmployeeLeaves(allLeaves);
+        highlightCurrentMonth();
+    };
+
+    const handleCurrentYearClick = async () => {
+        const now = new Date();
+        const thisYear = now.getUTCFullYear();
+        if (currentYear !== thisYear) {
+            currentYear = thisYear;
+            yearSelect.value = currentYear;
+            await showMonthlyView();
+        } else {
+            // If already on current year, just ensure highlight is correct (maybe re-render or just highlight)
+            highlightCurrentMonth();
+        }
+    };
+
+    const highlightCurrentMonth = () => {
+        // Remove existing highlights
+        document.querySelectorAll('.current-month-column').forEach(el => el.classList.remove('current-month-column'));
+
+        const now = new Date();
+        if (currentYear === now.getUTCFullYear()) {
+            const currentMonthIndex = now.getUTCMonth();
+            // Highlight header (index + 1 because of employee name column)
+            if (leavesHeaderRow && leavesHeaderRow.children[currentMonthIndex + 1]) {
+                leavesHeaderRow.children[currentMonthIndex + 1].classList.add('current-month-column');
+            }
+            // Highlight cells
+            document.querySelectorAll(`td[data-month="${currentMonthIndex}"]`).forEach(cell => {
+                cell.classList.add('current-month-column');
+            });
+        }
     };
 
     const showSummaryView = async () => {
@@ -432,30 +481,54 @@ export const Leaves = (() => {
             const bgColor = AppConfig.leaves.leaveTypeColors[leave.type] || AppConfig.leaves.leaveTypeColors.default;
             const start = toUTCDate(leave.startDate);
             const end = toUTCDate(leave.endDate);
-            let currentMonth = -1;
-            for (let d = new Date(start); d <= end; d.setUTCDate(d.getUTCDate() + 1)) {
-                if (d.getUTCFullYear() !== currentYear) continue;
-                if (d.getUTCMonth() !== currentMonth) {
-                    currentMonth = d.getUTCMonth();
-                    const cell = employeeRow.querySelector(`td[data-month="${currentMonth}"]`);
-                    if (!cell) continue;
-                    const monthStart = new Date(Math.max(start, Date.UTC(currentYear, currentMonth, 1)));
-                    const monthEnd = new Date(Math.min(end, Date.UTC(currentYear, currentMonth + 1, 0)));
-                    const div = document.createElement('div');
-                    div.classList.add('leave-block');
-                    const leaveTypeName = document.querySelector(
-                        `#leaveTypeSelect option[value="${leave.type || 'vacation'}"]`,
-                    ).textContent;
-                    div.setAttribute('title', leaveTypeName);
-                    div.style.backgroundColor = bgColor;
-                    let text = '';
-                    if (start < monthStart) text += `<span class="arrow">←</span> `;
-                    text += `${monthStart.getUTCDate()}`;
-                    if (monthStart.getTime() !== monthEnd.getTime()) text += `-${monthEnd.getUTCDate()}`;
-                    if (end > monthEnd) text += ` <span class="arrow">→</span>`;
-                    div.innerHTML = text;
-                    cell.appendChild(div);
+
+            // Optimization: Only iterate through months that overlap with the current year
+            if (end.getUTCFullYear() < currentYear || start.getUTCFullYear() > currentYear) return;
+
+            let startMonthIndex = 0;
+            let endMonthIndex = 11;
+
+            if (start.getUTCFullYear() === currentYear) startMonthIndex = start.getUTCMonth();
+            if (end.getUTCFullYear() === currentYear) endMonthIndex = end.getUTCMonth();
+
+            for (let monthIndex = startMonthIndex; monthIndex <= endMonthIndex; monthIndex++) {
+                const cell = employeeRow.querySelector(`td[data-month="${monthIndex}"]`);
+                if (!cell) continue;
+
+                const monthStart = new Date(Date.UTC(currentYear, monthIndex, 1));
+                const monthEnd = new Date(Date.UTC(currentYear, monthIndex + 1, 0));
+
+                // Check if leave actually overlaps with this month (should be true by loop logic, but good for safety)
+                if (start > monthEnd || end < monthStart) continue;
+
+                const div = document.createElement('div');
+                div.classList.add('leave-block');
+                const leaveOption = document.querySelector(`#leaveTypeSelect option[value="${leave.type || 'vacation'}"]`);
+                const leaveTypeName = leaveOption ? leaveOption.textContent : 'Urlop';
+
+                div.setAttribute('title', leaveTypeName);
+                div.style.backgroundColor = bgColor;
+
+                let text = '';
+                // Arrow if starts before this month
+                if (start < monthStart) text += `<span class="arrow">←</span> `;
+
+                // Start day in this month
+                const displayStart = start > monthStart ? start.getUTCDate() : monthStart.getUTCDate();
+                text += `${displayStart}`;
+
+                // End day in this month
+                const displayEnd = end < monthEnd ? end.getUTCDate() : monthEnd.getUTCDate();
+
+                if (displayStart !== displayEnd) {
+                    text += `-${displayEnd}`;
                 }
+
+                // Arrow if ends after this month
+                if (end > monthEnd) text += ` <span class="arrow">→</span>`;
+
+                div.innerHTML = text;
+                cell.appendChild(div);
             }
         });
     };

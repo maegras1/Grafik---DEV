@@ -58,8 +58,14 @@ export const ScheduleUI = (() => {
         _appState = appState;
         _createEmployeeTooltip(); // Utwórz globalny tooltip przy inicjalizacji
 
+        let lastWidth = window.innerWidth;
+
         window.addEventListener('resize', () => {
-            renderTable(); // Re-render on resize to switch views
+            // Only re-render if width changes (e.g. orientation change), ignoring height changes (keyboard open)
+            if (window.innerWidth !== lastWidth) {
+                lastWidth = window.innerWidth;
+                renderTable();
+            }
         });
     };
 

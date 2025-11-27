@@ -22,15 +22,33 @@ export const ScheduleEvents = (() => {
             // Drugie tapnięcie w zaznaczoną komórkę -> wejście w tryb edycji (klawiatura)
             if (isTouchDevice && activeCell === target) {
                 if (target.getAttribute('contenteditable') !== 'true') {
+                    event.stopPropagation(); // Zapobiegaj bąbelkowaniu do document click
                     _dependencies.enterEditMode(target);
                     return;
                 }
             }
 
             // SCENARIUSZ STANDARDOWY (Mysz i logika ogólna):
-            if (activeCell === target && target.getAttribute('contenteditable') === 'true') return;
+            if (activeCell === target && target.getAttribute('contenteditable') === 'true') {
+                return;
+            }
 
             if (activeCell && activeCell.getAttribute('contenteditable') === 'true') {
+                // Check if we are clicking the same logical cell (even if element reference changed due to re-render)
+                const activeTd = activeCell.closest('td');
+                const targetTd = target.closest('td');
+                const isSameLogical = activeTd && targetTd &&
+                    activeTd.dataset.time === targetTd.dataset.time &&
+                    activeTd.dataset.employeeIndex === targetTd.dataset.employeeIndex;
+
+                if (isSameLogical) {
+                    // Update active cell to the new target
+                    setActiveCell(target);
+                    // Force edit mode on the new target
+                    _dependencies.enterEditMode(target);
+                    return;
+                }
+
                 _dependencies.exitEditMode(activeCell);
             }
 
@@ -50,6 +68,12 @@ export const ScheduleEvents = (() => {
     };
 
     const _handleDocumentClick = (event) => {
+
+        // Fix for mobile/general editing: If the target is no longer in the DOM (e.g. replaced by edit mode), ignore it.
+        if (!document.body.contains(event.target)) {
+            return;
+        }
+
         if (!event.target.closest('.active-cell') && !event.target.closest('#contextMenu')) {
             if (activeCell && activeCell.getAttribute('contenteditable') === 'true') {
                 _dependencies.exitEditMode(activeCell);

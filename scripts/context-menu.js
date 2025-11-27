@@ -70,6 +70,7 @@ export const initializeContextMenu = (menuId, targetSelector, itemConfig) => {
     const handleClickOutside = (event) => {
         if (!contextMenu.contains(event.target)) {
             contextMenu.classList.remove('visible');
+            contextMenu.style.display = 'none'; // Explicitly hide
         }
     };
 
@@ -82,6 +83,7 @@ export const initializeContextMenu = (menuId, targetSelector, itemConfig) => {
                     item.action(currentTarget, contextMenu.contextEvent);
                 }
                 contextMenu.classList.remove('visible');
+                contextMenu.style.display = 'none'; // Explicitly hide
             };
             itemClickHandlers.set(item.id, handler);
             element.addEventListener('click', handler);

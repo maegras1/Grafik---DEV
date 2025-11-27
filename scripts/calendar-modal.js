@@ -7,6 +7,7 @@ export const CalendarModal = (() => {
         prevMonthBtn,
         nextMonthBtn,
         confirmBtn,
+        applyBtn,
         cancelBtn,
         clearSelectionBtn,
         startDatePreview,
@@ -118,6 +119,12 @@ export const CalendarModal = (() => {
         document.querySelectorAll('#calendarModal .day-cell-calendar').forEach((cell) => {
             if (cell.dataset.date) updateDayCellSelection(cell);
         });
+
+        // Also update days that are in dateToTypeMap but NOT in singleSelectedDays (already applied leaves)
+        dateToTypeMap.forEach((type, dateString) => {
+            const cell = document.querySelector(`#calendarModal .day-cell-calendar[data-date="${dateString}"]`);
+            if (cell) updateDayCellSelection(cell);
+        });
     };
 
     const updateDayCellSelection = (dayCell) => {
@@ -133,9 +140,10 @@ export const CalendarModal = (() => {
         const isInRange =
             isRangeSelectionActive && startStr && endStr && dateString >= startStr && dateString <= endStr;
         const isSelected = singleSelectedDays.has(dateString);
+        const isApplied = dateToTypeMap.has(dateString);
 
-        if (isSelected || isInRange) {
-            const leaveType = dateToTypeMap.get(dateString) || leaveTypeSelect.value;
+        if (isSelected || isInRange || isApplied) {
+            const leaveType = isApplied ? dateToTypeMap.get(dateString) : leaveTypeSelect.value;
             const color = AppConfig.leaves.leaveTypeColors[leaveType] || AppConfig.leaves.leaveTypeColors.default;
 
             dayCell.classList.add('selected');
@@ -275,39 +283,72 @@ export const CalendarModal = (() => {
         workdaysCounter.textContent = countWorkdaysInSet(singleSelectedDays);
     };
 
-    const confirmSelection = () => {
+    const applySelection = () => {
         const selectedLeaveType = leaveTypeSelect.value;
-        const sortedDays = Array.from(singleSelectedDays).sort();
+        const daysToApply = Array.from(singleSelectedDays);
+
+        if (daysToApply.length === 0) {
+            window.showToast('Nie zaznaczono żadnych dni.', 2000, 'warning');
+            return;
+        }
+
+        daysToApply.forEach(dateString => {
+            dateToTypeMap.set(dateString, selectedLeaveType);
+        });
+
+        // Clear selection but keep the modal open
+        resetSelection();
+        updateAllDayCells();
+        window.showToast('Zastosowano typ urlopu.', 1500, 'success');
+    };
+
+    const confirmSelection = () => {
+        // First, ensure any currently selected days are also applied (if user didn't click Apply first)
+        if (singleSelectedDays.size > 0) {
+            const selectedLeaveType = leaveTypeSelect.value;
+            singleSelectedDays.forEach(dateString => {
+                dateToTypeMap.set(dateString, selectedLeaveType);
+            });
+        }
+
+        // Now generate the leaves list from the map
+        const sortedDays = Array.from(dateToTypeMap.keys()).sort();
         const newLeaves = [];
+
         if (sortedDays.length > 0) {
             let rangeStart = sortedDays[0];
             let rangeEnd = sortedDays[0];
+            let currentType = dateToTypeMap.get(rangeStart);
+
             for (let i = 1; i < sortedDays.length; i++) {
                 const prevDay = toUTCDate(sortedDays[i - 1]);
                 const currentDay = toUTCDate(sortedDays[i]);
                 const diff = (currentDay - prevDay) / (1000 * 60 * 60 * 24);
-                const startType = dateToTypeMap.get(rangeStart) || selectedLeaveType;
-                const currentType = dateToTypeMap.get(sortedDays[i]) || selectedLeaveType;
-                if (diff === 1 && startType === currentType) {
+                const nextType = dateToTypeMap.get(sortedDays[i]);
+
+                if (diff === 1 && currentType === nextType) {
                     rangeEnd = sortedDays[i];
                 } else {
                     newLeaves.push({
                         id: toUTCDate(rangeStart).getTime().toString(),
                         startDate: rangeStart,
                         endDate: rangeEnd,
-                        type: startType,
+                        type: currentType,
                     });
                     rangeStart = sortedDays[i];
                     rangeEnd = sortedDays[i];
+                    currentType = nextType;
                 }
             }
+            // Push the last segment
             newLeaves.push({
                 id: toUTCDate(rangeStart).getTime().toString(),
                 startDate: rangeStart,
                 endDate: rangeEnd,
-                type: dateToTypeMap.get(rangeStart) || selectedLeaveType,
+                type: currentType,
             });
         }
+
         if (_resolvePromise) {
             _resolvePromise(newLeaves);
         }
@@ -327,6 +368,7 @@ export const CalendarModal = (() => {
         calendarSlider.addEventListener('click', handleDayClick);
         calendarSlider.addEventListener('mouseover', handleDayMouseOver);
         confirmBtn.addEventListener('click', confirmSelection);
+        applyBtn.addEventListener('click', applySelection);
         cancelBtn.addEventListener('click', closeModal);
         clearSelectionBtn.addEventListener('click', () => {
             resetSelection();
@@ -344,6 +386,7 @@ export const CalendarModal = (() => {
         prevMonthBtn = document.getElementById('prevMonthBtn');
         nextMonthBtn = document.getElementById('nextMonthBtn');
         confirmBtn = document.getElementById('confirmSelectionBtn');
+        applyBtn = document.getElementById('applySelectionBtn');
         cancelBtn = document.getElementById('cancelSelectionBtn');
         clearSelectionBtn = document.getElementById('clearSelectionBtn');
         startDatePreview = document.getElementById('startDatePreview');

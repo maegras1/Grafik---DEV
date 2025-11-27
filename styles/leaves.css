@@ -57,6 +57,12 @@
 .leaves-table th:first-child,
 .summary-table th:first-child {
     background-color: var(--bg-header);
+    z-index: 2;
+    /* Ensure it stays above sticky columns if any */
+}
+
+.current-month-column {
+    background-color: rgba(var(--color-secondary-rgb), 0.05);
 }
 
 .leaves-table td,
@@ -95,13 +101,21 @@
 .leave-block {
     background-color: #ffab91;
     color: var(--color-text);
-    padding: 2px 5px;
+    padding: 2px 6px;
     border-radius: 4px;
-    font-size: 0.8em;
-    margin-bottom: 2px;
+    font-size: 0.85em;
+    margin-bottom: 3px;
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+    transition: transform 0.1s;
+}
+
+.leave-block:hover {
+    transform: scale(1.02);
+    z-index: 2;
+    position: relative;
 }
 
 .arrow {
@@ -343,7 +357,8 @@
     color: #495057;
 }
 
-#clearFiltersBtn {
+#clearFiltersBtn,
+.action-btn {
     padding: 8px 15px;
     background-color: var(--color-danger);
     color: white;
@@ -354,8 +369,17 @@
     transition: background-color 0.2s ease;
 }
 
-#clearFiltersBtn:hover {
+#clearFiltersBtn:hover,
+.action-btn:hover {
     background-color: var(--color-danger-dark);
+}
+
+.action-btn.secondary {
+    background-color: var(--color-secondary);
+}
+
+.action-btn.secondary:hover {
+    background-color: var(--color-secondary-dark);
 }
 
 .leaves-legend {
@@ -385,7 +409,7 @@
     transition: border-color 0.2s ease-in-out;
 }
 
-.leaves-filter-container .filter-checkbox:checked + .legend-color-box {
+.leaves-filter-container .filter-checkbox:checked+.legend-color-box {
     border-color: #333;
     box-shadow: 0 0 0 2px rgba(0, 0, 0, 0.2);
 }
@@ -441,6 +465,29 @@
     gap: 25px;
     width: 100%;
     transform: none !important;
+}
+
+@media (max-width: 1200px) {
+    .calendar-slider {
+        grid-template-columns: repeat(3, 1fr);
+    }
+}
+
+@media (max-width: 900px) {
+    .calendar-slider {
+        grid-template-columns: repeat(2, 1fr);
+    }
+}
+
+@media (max-width: 600px) {
+    .calendar-slider {
+        grid-template-columns: 1fr;
+    }
+
+    #calendarModal .modal-content.wide {
+        padding: 10px;
+        width: 95%;
+    }
 }
 
 .calendar-wrapper {
