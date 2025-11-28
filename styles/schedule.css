@@ -109,19 +109,19 @@
 }
 
 .pnf-text,
-td.split-cell > div.pnf-text > span {
+td.split-cell>div.pnf-text>span {
     color: var(--bg-pnf);
     font-weight: bold;
 }
 
 .massage-text,
-td.split-cell > div.massage-text > span {
+td.split-cell>div.massage-text>span {
     color: var(--bg-massage);
     font-weight: bold;
 }
 
 .every-other-day-text,
-td.split-cell > div.every-other-day-text > span {
+td.split-cell>div.every-other-day-text>span {
     color: var(--bg-every-other-day);
     font-weight: bold;
 }
@@ -226,12 +226,18 @@ td.split-cell > div.every-other-day-text > span {
 /* Zmiana koloru dla przerwy - powtórzenie usunięte, obsłużone wyżej */
 
 td.split-cell {
-    display: flex;
-    flex-direction: row;
     padding: 0;
+    height: 1px;
 }
 
-td.split-cell > div {
+.split-cell-wrapper {
+    display: flex;
+    flex-direction: row;
+    height: 100%;
+    width: 100%;
+}
+
+.split-cell-wrapper>div {
     flex: 1;
     display: flex;
     align-items: center;
@@ -241,13 +247,17 @@ td.split-cell > div {
     overflow-wrap: break-word;
     word-wrap: break-word;
     white-space: normal;
-    border-bottom: 1px solid var(--color-border);
+    /* border-bottom removed to avoid double border */
     border-right: 1px solid var(--color-border);
     font-size: 0.9em;
     color: var(--color-text);
 }
 
-td.split-cell > div:first-child {
+.split-cell-wrapper>div:last-child {
+    border-right: none;
+}
+
+.split-cell-wrapper>div:first-child {
     border-right: 1px solid var(--color-border-dark);
 }
 
@@ -261,7 +271,7 @@ td.split-cell > div:first-child {
     box-shadow: inset 0 0 0 2px var(--color-secondary);
 }
 
-.schedule-table tbody tr.current-time-row > td {
+.schedule-table tbody tr.current-time-row>td {
     background-color: #fffde7;
     /* Jasnożółte tło */
     font-weight: bold;
@@ -289,6 +299,7 @@ td.current-time-highlight {
 }
 
 @keyframes bell-ring {
+
     0%,
     50%,
     100% {

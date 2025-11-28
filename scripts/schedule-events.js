@@ -543,20 +543,20 @@ export const ScheduleEvents = (() => {
                         // Migrate content
                         state.content1 = state.content || '';
                         state.content2 = '';
-                        delete state.content;
+                        state.content = null;
 
                         // Migrate flags
                         if (state.isMassage) {
                             state.isMassage1 = true;
-                            delete state.isMassage;
+                            state.isMassage = null;
                         }
                         if (state.isPnf) {
                             state.isPnf1 = true;
-                            delete state.isPnf;
+                            state.isPnf = null;
                         }
                         if (state.isEveryOtherDay) {
                             state.isEveryOtherDay1 = true;
-                            delete state.isEveryOtherDay;
+                            state.isEveryOtherDay = null;
                         }
 
                         // Migrate treatment data
@@ -568,24 +568,61 @@ export const ScheduleEvents = (() => {
                         };
 
                         // Clean up old treatment data
-                        delete state.treatmentStartDate;
-                        delete state.treatmentExtensionDays;
-                        delete state.treatmentEndDate;
-                        delete state.additionalInfo;
+                        state.treatmentStartDate = null;
+                        state.treatmentExtensionDays = null;
+                        state.treatmentEndDate = null;
+                        state.additionalInfo = null;
 
                         state.isSplit = true;
                         window.showToast('Podzielono komórkę');
                     }),
+                condition: (cell) => !cell.classList.contains('split-cell') && !cell.classList.contains('break-cell'),
             },
             {
                 id: 'contextMergeCells',
                 class: 'info',
-                condition: (cell) => cell.classList.contains('split-cell'),
+                condition: (cell) => {
+                    if (!cell.classList.contains('split-cell')) return false;
+                    // Check if at least one part is empty
+                    // We need to access the state to be sure, or check DOM content
+                    // Checking DOM is easier here since we have the cell element
+                    const parts = cell.querySelectorAll('.split-cell-wrapper > div');
+                    if (parts.length < 2) return true; // Should not happen if split
+                    const text1 = _dependencies.ui.getElementText(parts[0]).trim();
+                    const text2 = _dependencies.ui.getElementText(parts[1]).trim();
+                    return text1 === '' || text2 === '';
+                },
                 action: (cell) => _dependencies.mergeSplitCell(cell),
             },
             { id: 'contextMassage', action: (cell) => _dependencies.toggleSpecialStyle(cell, 'isMassage') },
             { id: 'contextPnf', action: (cell) => _dependencies.toggleSpecialStyle(cell, 'isPnf') },
-            { id: 'contextEveryOtherDay', action: (cell) => _dependencies.toggleSpecialStyle(cell, 'isEveryOtherDay') }, // Nowa opcja
+            { id: 'contextEveryOtherDay', action: (cell) => _dependencies.toggleSpecialStyle(cell, 'isEveryOtherDay') },
+            {
+                id: 'contextClearFormatting',
+                action: (cell) => {
+                    _dependencies.updateCellState(cell, (state) => {
+                        state.isMassage = false;
+                        state.isPnf = false;
+                        state.isEveryOtherDay = false;
+                        // Also clear split cell flags if applicable?
+                        // If split, we might need to clear isMassage1/2 etc.
+                        // But toggleSpecialStyle usually handles the active part.
+                        // Let's assume this clears the *cell level* or *active part* formatting.
+                        // Since context menu is on the cell (td), but _dependencies.toggleSpecialStyle handles logic.
+                        // Let's manually clear all known flags for safety or use a helper if available.
+                        // For now, simple clear:
+                        if (state.isSplit) {
+                            state.isMassage1 = false;
+                            state.isMassage2 = false;
+                            state.isPnf1 = false;
+                            state.isPnf2 = false;
+                            state.isEveryOtherDay1 = false;
+                            state.isEveryOtherDay2 = false;
+                        }
+                        window.showToast('Wyczyszczono formatowanie');
+                    });
+                },
+            },
         ];
         initializeContextMenu('contextMenu', '.editable-cell', contextMenuItems);
 

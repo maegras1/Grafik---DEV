@@ -116,6 +116,9 @@ export const ScheduleUI = (() => {
         if (displayData.isBreak) {
             cell.textContent = displayData.text;
         } else if (displayData.isSplit) {
+            const wrapper = document.createElement('div');
+            wrapper.className = 'split-cell-wrapper';
+
             displayData.parts.forEach((part) => {
                 const div = document.createElement('div');
                 div.setAttribute('tabindex', '0');
@@ -133,8 +136,9 @@ export const ScheduleUI = (() => {
                 if (part.isPnf) div.dataset.isPnf = 'true';
                 if (part.isEveryOtherDay) div.dataset.isEveryOtherDay = 'true';
 
-                cell.appendChild(div);
+                wrapper.appendChild(div);
             });
+            cell.appendChild(wrapper);
         } else {
             const span = document.createElement('span');
             span.textContent = displayData.text;

@@ -399,9 +399,9 @@ export const Schedule = (() => {
             const mergedContent = content1.trim() === '' ? content2 : content1;
 
             updateCellState(cell, (state) => {
-                delete state.isSplit;
-                delete state.content1;
-                delete state.content2;
+                state.isSplit = null;
+                state.content1 = null;
+                state.content2 = null;
                 state.content = mergedContent;
                 window.showToast('Scalono komórkę.');
             });
