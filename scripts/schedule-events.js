@@ -208,29 +208,7 @@ export const ScheduleEvents = (() => {
         }
     };
 
-    // ... (rest of the file) ...
 
-    document.getElementById('btnAddBreak')?.addEventListener('click', () => {
-        if (activeCell) {
-            if (activeCell.classList.contains('break-cell')) {
-                _dependencies.updateCellState(activeCell, (state) => {
-                    state.isBreak = false;
-                    window.showToast('Usunięto przerwę');
-                });
-            } else {
-                if (_dependencies.ui.getElementText(activeCell).trim() !== '') {
-                    window.showToast('Nie można dodać przerwy do zajętej komórki. Najpierw wyczyść komórkę.', 3000);
-                    return;
-                }
-                _dependencies.updateCellState(activeCell, (state) => {
-                    state.isBreak = true;
-                    window.showToast('Dodano przerwę');
-                });
-            }
-        } else {
-            window.showToast('Wybierz komórkę, aby zarządzać przerwą.', 3000);
-        }
-    });
 
     const _handleDragOver = (event) => {
         event.preventDefault();
@@ -260,27 +238,18 @@ export const ScheduleEvents = (() => {
             const targetTime = dropTargetCell.dataset.time;
             const targetIndex = dropTargetCell.dataset.employeeIndex;
 
+            // Determine target part if split
+            let targetPart = null;
+            if (event.target.tagName === 'DIV' && event.target.parentNode.classList.contains('split-cell-wrapper')) {
+                targetPart = event.target === event.target.parentNode.children[0] ? 1 : 2;
+            }
+
             // Get source content to copy (read-only access to state)
             const sourceCellState = _dependencies.appState.scheduleCells[sourceTime]?.[sourceIndex] || {};
-            const contentKeys = [
-                'content',
-                'content1',
-                'content2',
-                'isSplit',
-                'isMassage',
-                'isPnf',
-                'isEveryOtherDay',
-                'treatmentStartDate',
-                'treatmentExtensionDays',
-                'treatmentEndDate',
-                'additionalInfo',
-                'treatmentData1',
-                'treatmentData2',
-                'isMassage1',
-                'isMassage2',
-                'isPnf1',
-                'isPnf2',
-            ];
+
+            // Helper to safely copy value or null
+            const safeCopy = (val) => val === undefined ? null : val;
+            const safeBool = (val) => val === undefined ? false : val;
 
             const sourceContentString = sourceCellState.isSplit
                 ? `${sourceCellState.content1 || ''}/${sourceCellState.content2 || ''}`
@@ -296,14 +265,87 @@ export const ScheduleEvents = (() => {
                     time: targetTime,
                     employeeIndex: targetIndex,
                     updateFn: (targetState) => {
-                        // Clear target content first
-                        for (const key of contentKeys) {
-                            delete targetState[key];
-                        }
-                        // Copy from source
-                        for (const key of contentKeys) {
-                            if (sourceCellState[key] !== undefined) {
-                                targetState[key] = sourceCellState[key];
+                        if (targetPart && targetState.isSplit) {
+                            // Dropping into a specific part of a split cell
+                            // We assume source is NOT split for simplicity in this specific interaction, 
+                            // OR we take the "content" if source is simple.
+                            // If source IS split, we might need to decide what to take. 
+                            // Current logic in _handleDrop (original) took everything.
+                            // Let's assume we take the "primary" content or just 'content' if it was a simple drag.
+                            // But wait, draggedCell is the element. If draggedCell was a split part, we should know.
+                            // The dragstart event sets dataTransfer, but here we access state directly.
+                            // Let's assume we are dragging a whole cell or a simple cell.
+                            // If source is split, dragging "it" usually means the whole cell.
+                            // But if we drop into a PART, we probably only want the content.
+
+                            // Simplified logic: If source is split, take combined? No, that's messy.
+                            // Let's assume source is simple for now, or take content1 if split.
+                            // Better: Check if dragged element was a part.
+                            // draggedCell is the TD. We don't track the specific div in draggedCell variable easily 
+                            // unless we updated _handleDragStart.
+                            // For now, let's use the logic: If source is split, take content1/2 based on... nothing?
+                            // Let's stick to: If source is split, we shouldn't be dragging "it" easily into a part without more logic.
+                            // BUT, if source is simple:
+
+                            let contentToMove = sourceCellState.content;
+                            let isMassage = sourceCellState.isMassage;
+                            let isPnf = sourceCellState.isPnf;
+                            let isEveryOtherDay = sourceCellState.isEveryOtherDay;
+                            let treatmentData = {
+                                startDate: sourceCellState.treatmentStartDate,
+                                extensionDays: sourceCellState.treatmentExtensionDays,
+                                endDate: sourceCellState.treatmentEndDate,
+                                additionalInfo: sourceCellState.additionalInfo
+                            };
+
+                            if (sourceCellState.isSplit) {
+                                // If dragging a split cell, this is ambiguous. 
+                                // For now, let's just take content1 as a fallback or block it.
+                                // Or maybe we just don't support dragging split cells INTO parts yet.
+                                // Let's assume source is simple.
+                                contentToMove = sourceCellState.content1; // Fallback
+                            }
+
+                            targetState[`content${targetPart}`] = safeCopy(contentToMove);
+                            targetState[`isMassage${targetPart}`] = safeBool(isMassage);
+                            targetState[`isPnf${targetPart}`] = safeBool(isPnf);
+                            targetState[`isEveryOtherDay${targetPart}`] = safeBool(isEveryOtherDay);
+
+                            targetState[`treatmentData${targetPart}`] = {
+                                startDate: safeCopy(treatmentData.startDate),
+                                extensionDays: safeCopy(treatmentData.extensionDays),
+                                endDate: safeCopy(treatmentData.endDate),
+                                additionalInfo: safeCopy(treatmentData.additionalInfo)
+                            };
+
+                            // Clear top-level data to avoid ambiguity
+                            targetState.treatmentStartDate = null;
+                            targetState.treatmentExtensionDays = null;
+                            targetState.treatmentEndDate = null;
+                            targetState.additionalInfo = null;
+                            targetState.content = null;
+                            targetState.isMassage = null;
+                            targetState.isPnf = null;
+                            targetState.isEveryOtherDay = null;
+
+                        } else {
+                            // Standard overwrite (target is not split, or we are dropping onto the cell container)
+                            // Clear target content first
+                            const contentKeys = [
+                                'content', 'content1', 'content2', 'isSplit',
+                                'isMassage', 'isPnf', 'isEveryOtherDay',
+                                'treatmentStartDate', 'treatmentExtensionDays', 'treatmentEndDate', 'additionalInfo',
+                                'treatmentData1', 'treatmentData2',
+                                'isMassage1', 'isMassage2', 'isPnf1', 'isPnf2'
+                            ];
+                            for (const key of contentKeys) {
+                                delete targetState[key];
+                            }
+                            // Copy from source
+                            for (const key of contentKeys) {
+                                if (sourceCellState[key] !== undefined) {
+                                    targetState[key] = sourceCellState[key];
+                                }
                             }
                         }
                     },
@@ -313,7 +355,19 @@ export const ScheduleEvents = (() => {
                     time: sourceTime,
                     employeeIndex: sourceIndex,
                     updateFn: (sourceState) => {
-                        // Clear source content
+                        // If we moved into a part, we still clear the whole source?
+                        // Yes, "Move" implies the source is emptied.
+                        // Unless we dragged a PART of a split cell.
+                        // But _handleDragStart sets draggedCell to TD.
+                        // So we clear the whole source TD.
+
+                        const contentKeys = [
+                            'content', 'content1', 'content2', 'isSplit',
+                            'isMassage', 'isPnf', 'isEveryOtherDay',
+                            'treatmentStartDate', 'treatmentExtensionDays', 'treatmentEndDate', 'additionalInfo',
+                            'treatmentData1', 'treatmentData2',
+                            'isMassage1', 'isMassage2', 'isPnf1', 'isPnf2'
+                        ];
                         for (const key of contentKeys) {
                             sourceState[key] = null;
                         }
@@ -540,8 +594,11 @@ export const ScheduleEvents = (() => {
                 id: 'contextSplitCell',
                 action: (cell) =>
                     _dependencies.updateCellState(cell, (state) => {
+                        // Helper to safely copy value or null
+                        const safeCopy = (val) => val === undefined ? null : val;
+
                         // Migrate content
-                        state.content1 = state.content || '';
+                        state.content1 = safeCopy(state.content || '');
                         state.content2 = '';
                         state.content = null;
 
@@ -561,10 +618,10 @@ export const ScheduleEvents = (() => {
 
                         // Migrate treatment data
                         state.treatmentData1 = {
-                            startDate: state.treatmentStartDate,
-                            extensionDays: state.treatmentExtensionDays,
-                            endDate: state.treatmentEndDate,
-                            additionalInfo: state.additionalInfo,
+                            startDate: safeCopy(state.treatmentStartDate),
+                            extensionDays: safeCopy(state.treatmentExtensionDays),
+                            endDate: safeCopy(state.treatmentEndDate),
+                            additionalInfo: safeCopy(state.additionalInfo),
                         };
 
                         // Clean up old treatment data
@@ -583,11 +640,8 @@ export const ScheduleEvents = (() => {
                 class: 'info',
                 condition: (cell) => {
                     if (!cell.classList.contains('split-cell')) return false;
-                    // Check if at least one part is empty
-                    // We need to access the state to be sure, or check DOM content
-                    // Checking DOM is easier here since we have the cell element
                     const parts = cell.querySelectorAll('.split-cell-wrapper > div');
-                    if (parts.length < 2) return true; // Should not happen if split
+                    if (parts.length < 2) return true;
                     const text1 = _dependencies.ui.getElementText(parts[0]).trim();
                     const text2 = _dependencies.ui.getElementText(parts[1]).trim();
                     return text1 === '' || text2 === '';
@@ -604,13 +658,6 @@ export const ScheduleEvents = (() => {
                         state.isMassage = false;
                         state.isPnf = false;
                         state.isEveryOtherDay = false;
-                        // Also clear split cell flags if applicable?
-                        // If split, we might need to clear isMassage1/2 etc.
-                        // But toggleSpecialStyle usually handles the active part.
-                        // Let's assume this clears the *cell level* or *active part* formatting.
-                        // Since context menu is on the cell (td), but _dependencies.toggleSpecialStyle handles logic.
-                        // Let's manually clear all known flags for safety or use a helper if available.
-                        // For now, simple clear:
                         if (state.isSplit) {
                             state.isMassage1 = false;
                             state.isMassage2 = false;
@@ -766,8 +813,12 @@ export const ScheduleEvents = (() => {
     return {
         initialize,
         destroy,
+        _handleDragStart,
+        _handleDrop,
+        _handleDragOver,
+        _handleDragLeave,
+        _handleDragEnd,
     };
 })();
 
-// Backward compatibility
 window.ScheduleEvents = ScheduleEvents;

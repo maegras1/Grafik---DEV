@@ -83,20 +83,11 @@ export const ScheduleModals = (() => {
 
         patientNameInput.value = patientName;
 
-        let treatmentData = {};
-        let currentAdditionalInfo = '';
-
-        if (isSplitPart) {
-            const dataKey = `treatmentData${partIndex}`;
-            treatmentData = cellState[dataKey] || {};
-            currentAdditionalInfo = treatmentData.additionalInfo || '';
-        } else {
-            treatmentData = {
-                startDate: cellState.treatmentStartDate,
-                extensionDays: cellState.treatmentExtensionDays,
-            };
-            currentAdditionalInfo = cellState.additionalInfo || '';
-        }
+        const treatmentData = {
+            startDate: cellState.treatmentStartDate,
+            extensionDays: cellState.treatmentExtensionDays,
+        };
+        const currentAdditionalInfo = cellState.additionalInfo || '';
 
         startDateInput.value = treatmentData.startDate || '';
         extensionDaysInput.value = treatmentData.extensionDays || 0;
@@ -145,15 +136,10 @@ export const ScheduleModals = (() => {
             };
 
             updateCellStateCallback((state) => {
-                if (isSplitPart) {
-                    const dataKey = `treatmentData${partIndex}`;
-                    state[dataKey] = newTreatmentData;
-                } else {
-                    state.treatmentStartDate = newTreatmentData.startDate;
-                    state.treatmentExtensionDays = newTreatmentData.extensionDays;
-                    state.treatmentEndDate = newTreatmentData.endDate;
-                    state.additionalInfo = newTreatmentData.additionalInfo;
-                }
+                state.treatmentStartDate = newTreatmentData.startDate;
+                state.treatmentExtensionDays = newTreatmentData.extensionDays;
+                state.treatmentEndDate = newTreatmentData.endDate;
+                state.additionalInfo = newTreatmentData.additionalInfo;
             });
             window.showToast('Zapisano daty zabiegów i informacje o pacjencie.');
             closeModal();
