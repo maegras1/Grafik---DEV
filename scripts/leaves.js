@@ -195,7 +195,7 @@ export const Leaves = (() => {
     const populateYearSelect = () => {
         const currentYear = new Date().getUTCFullYear();
         const startYear = currentYear - 5; // 5 years back
-        const endYear = currentYear + 5; // 5 years forward
+        const endYear = currentYear + 10; // 10 years forward (increased for better planning)
 
         yearSelect.innerHTML = ''; // Clear existing options
 
@@ -629,70 +629,137 @@ export const Leaves = (() => {
     const renderSingleEmployeeLeaves = (employeeName, leaves) => {
         const employeeRow = leavesTableBody.querySelector(`tr[data-employee="${employeeName}"]`);
         if (!employeeRow) return;
+
+        // Clear all cells first
         employeeRow.querySelectorAll('.day-cell').forEach((cell) => {
             cell.innerHTML = '';
         });
 
-        const filteredLeaves = leaves.filter((leave) => activeFilters.has(leave.type || 'vacation'));
+        // 1. FILTER & SORT
+        const filteredLeaves = leaves
+            .filter((leave) => {
+                if (!leave.id || !leave.startDate || !leave.endDate) return false;
+                if (!activeFilters.has(leave.type || 'vacation')) return false;
+
+                const start = toUTCDate(leave.startDate);
+                const end = toUTCDate(leave.endDate);
+
+                // Optimization: Only keep leaves that overlap with the current year
+                if (end.getUTCFullYear() < currentYear || start.getUTCFullYear() > currentYear) return false;
+                return true;
+            })
+            .sort((a, b) => new Date(a.startDate) - new Date(b.startDate));
+
+        // 2. SWIMLANE ASSIGNMENT
+        // lanes[laneIndex][monthIndex] = leaveObject | null
+        const lanes = [];
 
         filteredLeaves.forEach((leave) => {
-            if (!leave.id || !leave.startDate || !leave.endDate) return;
-
-            const bgColor = AppConfig.leaves.leaveTypeColors[leave.type] || AppConfig.leaves.leaveTypeColors.default;
             const start = toUTCDate(leave.startDate);
             const end = toUTCDate(leave.endDate);
 
-            // Optimization: Only iterate through months that overlap with the current year
-            if (end.getUTCFullYear() < currentYear || start.getUTCFullYear() > currentYear) return;
-
+            // Determine month range (0-11) for the current year
             let startMonthIndex = 0;
             let endMonthIndex = 11;
 
             if (start.getUTCFullYear() === currentYear) startMonthIndex = start.getUTCMonth();
+            else if (start.getUTCFullYear() > currentYear) startMonthIndex = 12; // Out of bounds right
+
             if (end.getUTCFullYear() === currentYear) endMonthIndex = end.getUTCMonth();
+            else if (end.getUTCFullYear() < currentYear) endMonthIndex = -1; // Out of bounds left
 
-            for (let monthIndex = startMonthIndex; monthIndex <= endMonthIndex; monthIndex++) {
-                const cell = employeeRow.querySelector(`td[data-month="${monthIndex}"]`);
-                if (!cell) continue;
+            // Clamp locally to 0-11 for matrix usage
+            const effectiveStart = Math.max(0, startMonthIndex);
+            const effectiveEnd = Math.min(11, endMonthIndex);
 
-                const monthStart = new Date(Date.UTC(currentYear, monthIndex, 1));
-                const monthEnd = new Date(Date.UTC(currentYear, monthIndex + 1, 0));
+            if (effectiveStart > effectiveEnd) return; // Should have been caught by filter, but safety first
 
-                // Check if leave actually overlaps with this month (should be true by loop logic, but good for safety)
-                if (start > monthEnd || end < monthStart) continue;
+            // Find the first lane that is empty for all months in [effectiveStart, effectiveEnd]
+            let laneIndex = 0;
+            while (true) {
+                if (!lanes[laneIndex]) lanes[laneIndex] = new Array(12).fill(null);
 
-                const div = document.createElement('div');
-                div.classList.add('leave-block');
-                const leaveOption = document.querySelector(`#leaveTypeSelect option[value="${leave.type || 'vacation'}"]`);
-                const leaveTypeName = leaveOption ? leaveOption.textContent : 'Urlop';
-
-                div.setAttribute('title', leaveTypeName);
-                div.style.backgroundColor = bgColor;
-
-                // Continuity logic
-                if (start < monthStart) {
-                    div.classList.add('continues-left');
-                }
-                if (end > monthEnd) {
-                    div.classList.add('continues-right');
+                let isLaneFree = true;
+                for (let m = effectiveStart; m <= effectiveEnd; m++) {
+                    if (lanes[laneIndex][m] !== null && lanes[laneIndex][m] !== undefined) {
+                        isLaneFree = false;
+                        break;
+                    }
                 }
 
-                let text = '';
-                // Start day in this month
-                const displayStart = start > monthStart ? start.getUTCDate() : monthStart.getUTCDate();
-                text += `${displayStart}`;
-
-                // End day in this month
-                const displayEnd = end < monthEnd ? end.getUTCDate() : monthEnd.getUTCDate();
-
-                if (displayStart !== displayEnd) {
-                    text += `-${displayEnd}`;
+                if (isLaneFree) {
+                    // Place items in the matrix
+                    for (let m = effectiveStart; m <= effectiveEnd; m++) {
+                        lanes[laneIndex][m] = leave;
+                    }
+                    break;
                 }
-
-                div.innerHTML = text;
-                cell.appendChild(div);
+                laneIndex++;
             }
         });
+
+        // 3. RENDER
+        // Iterate through each month (column)
+        for (let monthIndex = 0; monthIndex < 12; monthIndex++) {
+            const cell = employeeRow.querySelector(`td[data-month="${monthIndex}"]`);
+            if (!cell) continue;
+
+            const monthStart = new Date(Date.UTC(currentYear, monthIndex, 1));
+            const monthEnd = new Date(Date.UTC(currentYear, monthIndex + 1, 0));
+
+            // Find highest occupied lane for this month to know how many rows to render
+            let maxLaneForMonth = -1;
+            for (let l = 0; l < lanes.length; l++) {
+                if (lanes[l] && lanes[l][monthIndex]) {
+                    maxLaneForMonth = l;
+                }
+            }
+
+            // Render each lane up to maxLaneForMonth
+            for (let l = 0; l <= maxLaneForMonth; l++) {
+                const leave = lanes[l] ? lanes[l][monthIndex] : null;
+
+                if (leave) {
+                    const bgColor = AppConfig.leaves.leaveTypeColors[leave.type] || AppConfig.leaves.leaveTypeColors.default;
+                    const start = toUTCDate(leave.startDate);
+                    const end = toUTCDate(leave.endDate);
+
+                    const div = document.createElement('div');
+                    div.classList.add('leave-block');
+                    const leaveOption = document.querySelector(`#leaveTypeSelect option[value="${leave.type || 'vacation'}"]`);
+                    const leaveTypeName = leaveOption ? leaveOption.textContent : 'Urlop';
+
+                    div.setAttribute('title', leaveTypeName);
+                    div.style.backgroundColor = bgColor;
+
+                    // Continuity logic
+                    if (start < monthStart) {
+                        div.classList.add('continues-left');
+                    }
+                    if (end > monthEnd) {
+                        div.classList.add('continues-right');
+                    }
+
+                    let text = '';
+                    const displayStart = start > monthStart ? start.getUTCDate() : monthStart.getUTCDate();
+                    text += `${displayStart}`;
+                    const displayEnd = end < monthEnd ? end.getUTCDate() : monthEnd.getUTCDate();
+
+                    if (displayStart !== displayEnd) {
+                        text += `-${displayEnd}`;
+                    }
+
+                    div.innerHTML = text;
+                    cell.appendChild(div);
+                } else {
+                    // Render SPACER
+                    const spacer = document.createElement('div');
+                    spacer.classList.add('leave-spacer');
+                    spacer.innerHTML = '&nbsp;';
+                    cell.appendChild(spacer);
+                }
+            }
+        }
     };
 
     const clearCellLeaves = async (cell) => {
