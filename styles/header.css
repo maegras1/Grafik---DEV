@@ -3,12 +3,17 @@
     justify-content: space-between;
     align-items: center;
     padding: 10px 20px;
-    background-color: var(--color-primary-600);
+    background-color: rgba(5, 150, 105, 0.85);
+    /* Emerald Green with opacity */
+    backdrop-filter: blur(10px);
     /* Emerald Green Header */
     color: var(--color-white);
-    position: sticky;
-    top: 0;
+    /* position: sticky removed - handled by flex layout */
     z-index: 1000;
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    position: relative;
+    /* Ensure z-index context works reliably */
 }
 
 .banner-left-content {
@@ -237,8 +242,18 @@
     list-style: none;
     padding: 0;
     margin: 0;
-    flex-grow: 1;
     overflow-y: auto;
+}
+
+.nav-panel .main-nav-list {
+    flex-grow: 1;
+    /* This list takes available space */
+}
+
+.nav-panel .logout-nav-list {
+    flex-grow: 0;
+    margin-top: auto;
+    /* Push to bottom if needed, though flex-grow on main list handles it */
 }
 
 .nav-panel li {

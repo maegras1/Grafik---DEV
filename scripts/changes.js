@@ -127,7 +127,7 @@ export const Changes = (() => {
 
             for (const employeeId in employees) {
                 const employee = employees[employeeId];
-                if (employee.isHidden) continue;
+                if (employee.isHidden || employee.isScheduleOnly) continue;
 
                 const employeeName = employee.displayName || employee.name;
                 const employeeLeaves = allLeavesData[employeeName];
@@ -171,7 +171,7 @@ export const Changes = (() => {
         searchInput.value = ''; // Clear search input
 
         const allEmployees = Object.fromEntries(
-            Object.entries(EmployeeManager.getAll()).filter(([, employee]) => !employee.isHidden),
+            Object.entries(EmployeeManager.getAll()).filter(([, employee]) => !employee.isHidden && !employee.isScheduleOnly),
         );
         const period = cell.parentElement.dataset.startDate;
         const columnIndex = cell.cellIndex;

@@ -570,7 +570,8 @@ export const Leaves = (() => {
         leavesTableBody.innerHTML = '';
         const sortedEmployees = Object.entries(employees)
             .map(([id, emp]) => ({ ...emp, id }))
-            .filter((emp) => !emp.isHidden);
+            .filter((emp) => !emp.isHidden && !emp.isScheduleOnly)
+            .sort((a, b) => EmployeeManager.compareEmployees(a, b));
 
         sortedEmployees.forEach((emp) => {
             const name = emp.displayName || emp.name;
@@ -579,13 +580,14 @@ export const Leaves = (() => {
             tr.dataset.id = emp.id; // Store ID for lookup
 
             const nameTd = document.createElement('td');
-            nameTd.textContent = name;
+            nameTd.textContent = EmployeeManager.getFullNameById(emp.id);
             nameTd.classList.add('employee-name-cell');
             tr.appendChild(nameTd);
             months.forEach((_, monthIndex) => {
                 const monthTd = document.createElement('td');
                 monthTd.classList.add('day-cell');
                 monthTd.dataset.month = monthIndex;
+                monthTd.setAttribute('data-label', months[monthIndex]); // Dodanie etykiety dla RWD
                 monthTd.setAttribute('tabindex', '0');
                 tr.appendChild(monthTd);
             });
@@ -633,6 +635,7 @@ export const Leaves = (() => {
         // Clear all cells first
         employeeRow.querySelectorAll('.day-cell').forEach((cell) => {
             cell.innerHTML = '';
+            cell.classList.remove('has-content');
         });
 
         // 1. FILTER & SORT
@@ -751,6 +754,7 @@ export const Leaves = (() => {
 
                     div.innerHTML = text;
                     cell.appendChild(div);
+                    cell.classList.add('has-content'); // Mark cell as having content for CSS filtering
                 } else {
                     // Render SPACER
                     const spacer = document.createElement('div');
