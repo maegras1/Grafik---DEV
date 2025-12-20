@@ -99,7 +99,7 @@ export const Shared = (() => {
             footerInfo.innerHTML = '<p>&copy; 2025 Fizjoterapia Kalinowa. Wszelkie prawa zastrzeżone.</p>';
             navPanel.appendChild(footerInfo);
 
-            headerRightMenu.appendChild(hamburger);
+            document.body.appendChild(hamburger);
             document.body.appendChild(navPanel);
 
             const updateActiveLink = () => {
