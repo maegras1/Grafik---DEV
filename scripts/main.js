@@ -1,5 +1,5 @@
-// scripts/main.js
 import { Router } from './router.js';
+import { BackupScheduler } from './backup-scheduler.js';
 import './firebase-config.js'; // Ensure Firebase is initialized
 import './common.js';
 import './shared.js';
@@ -20,6 +20,7 @@ import './login.js';
 
 document.addEventListener('DOMContentLoaded', () => {
     Router.init();
+    BackupScheduler.init();
 
     // Apply seasonal theme if applicable
     import('./seasonal-themes.js').then(module => {
