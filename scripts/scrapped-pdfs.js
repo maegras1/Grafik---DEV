@@ -59,7 +59,18 @@ export const ScrappedPdfs = (() => {
             const linkCell = document.createElement('td');
             const anchor = document.createElement('a');
             anchor.href = linkData.url;
-            anchor.target = '_blank';
+            // Removed target blank to handle custom click
+            anchor.className = 'pdf-link';
+
+            anchor.addEventListener('click', (e) => {
+                e.preventDefault();
+                if (ScrappedPdfs.openPdf) {
+                    ScrappedPdfs.openPdf(linkData.url, linkData.title);
+                } else {
+                    // Fallback if modal logic not ready
+                    window.open(linkData.url, '_blank');
+                }
+            });
 
             // Icon
             const icon = document.createElement('i');
@@ -148,10 +159,90 @@ export const ScrappedPdfs = (() => {
         displayLinks(filteredLinks);
     };
 
+    const initModal = () => {
+        const modal = document.getElementById('pdfModal');
+        const closeBtn = document.getElementById('pdfCloseBtn');
+        const openNewTabBtn = document.getElementById('pdfOpenNewTabBtn');
+        const iframe = document.getElementById('pdfIframe');
+        const title = document.getElementById('pdfModalTitle');
+
+        const loginModal = document.getElementById('isoLoginModal');
+        const loginConfirmBtn = document.getElementById('isoLoginConfirmBtn');
+        const loginCancelBtn = document.getElementById('isoLoginCancelBtn');
+
+        let pendingUrl = null;
+        let pendingTitle = null;
+        let isIsoAuthenticated = false;
+
+        if (!modal || !closeBtn || !iframe) return;
+
+        const closeModal = () => {
+            modal.style.display = 'none';
+            iframe.src = '';
+        };
+
+        const closeLoginModal = () => {
+            if (loginModal) {
+                loginModal.style.display = 'none';
+                const l = document.getElementById('isoLogin');
+                const p = document.getElementById('isoPassword');
+                if (l) l.value = '';
+                if (p) p.value = '';
+            }
+            pendingUrl = null;
+            pendingTitle = null;
+        };
+
+        closeBtn.addEventListener('click', closeModal);
+        modal.addEventListener('click', (e) => {
+            if (e.target === modal) closeModal();
+        });
+
+        if (loginConfirmBtn) {
+            loginConfirmBtn.addEventListener('click', () => {
+                isIsoAuthenticated = true;
+                closeLoginModal();
+                if (pendingUrl) {
+                    ScrappedPdfs.actualOpenPdf(pendingUrl, pendingTitle);
+                }
+            });
+        }
+
+        if (loginCancelBtn) {
+            loginCancelBtn.addEventListener('click', closeLoginModal);
+        }
+
+        ScrappedPdfs.openPdf = (url, docTitle) => {
+            if (isIsoAuthenticated) {
+                ScrappedPdfs.actualOpenPdf(url, docTitle);
+            } else {
+                pendingUrl = url;
+                pendingTitle = docTitle;
+                if (loginModal) {
+                    loginModal.style.display = 'flex';
+                } else {
+                    ScrappedPdfs.actualOpenPdf(url, docTitle);
+                }
+            }
+        };
+
+        ScrappedPdfs.actualOpenPdf = (url, docTitle) => {
+            if (openNewTabBtn) openNewTabBtn.href = url;
+            if (title) title.textContent = docTitle || 'Podgląd dokumentu';
+
+            const separator = url.includes('#') ? '&' : '#';
+            const cleanUrl = `${url}${separator}navpanes=0&toolbar=0&view=FitH`;
+
+            iframe.src = cleanUrl;
+            modal.style.display = 'flex';
+        };
+    };
+
     const init = () => {
         const fetchPromise = fetchAndDisplayPdfLinks();
         document.addEventListener('app:search', handleGlobalSearch);
         initRefresh();
+        initModal();
         return fetchPromise;
     };
 
