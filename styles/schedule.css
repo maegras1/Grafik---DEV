@@ -1,139 +1,386 @@
 /* Style dla tabeli grafiku (schedule.html) */
 
-#mainScheduleTable {
+.table-container {
     width: 100%;
-    border-collapse: collapse;
-    background-color: #fff;
-    box-shadow: 0 2px 5px rgba(0,0,0,0.1);
-    border-radius: 8px;
+    overflow-x: auto;
+    position: relative;
+}
+
+/* Mask to hide rows scrolling through the 12px gap */
+.table-container::before {
+    content: '';
+    position: sticky;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 12px;
+    background-color: #f6f8fb;
+    /* Match body gradient start color */
+    display: block;
+    z-index: 110;
+    /* Above table header */
+    pointer-events: none;
+}
+
+/* Ensure container for schedule has padding for the gap */
+#page-content.container {
+    padding-top: 0;
+}
+
+.schedule-table {
+    width: 100%;
+    border-collapse: separate;
+    /* Changed from collapse to fix sticky header issues */
+    border-spacing: 0;
+    background-color: var(--color-white);
+    box-shadow: var(--shadow-md);
+    /* border-radius removed to fix rendering issues */
+    /* overflow: hidden removed to fix sticky headers */
+    /* Note: This might clip sticky headers if container doesn't scroll, but usually fine */
+    border: none;
     min-width: 900px;
 }
-#mainScheduleTable th, #mainScheduleTable td {
+
+.schedule-table th,
+.schedule-table td {
     padding: 7px;
-    border: 1px solid #999;
+    border: 1px solid var(--color-border-dark);
     text-align: center;
     white-space: normal;
     overflow-wrap: break-word;
     outline: none;
 }
-#mainScheduleTable thead th {
-    background-color: #4CAF50;
-    color: white;
+
+table.schedule-table thead tr th {
+    background-color: var(--color-primary-600);
+    color: var(--color-white);
     cursor: pointer;
     position: sticky;
-    top: 60px;
-    z-index: 10;
+    top: 12px;
+    /* Stuck 12px below top of scroll parent to preserve gap */
+    z-index: 100;
     white-space: nowrap;
+    border: 1px solid var(--color-primary-700);
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+    /* Slightly stronger shadow */
+    background-clip: padding-box;
+    transform: translateZ(0);
 }
-#mainScheduleTable thead th:nth-child(even) {
-    background-color: #45a049;
+
+.schedule-table thead th:nth-child(even) {
+    background-color: var(--color-primary-700);
 }
-#mainScheduleTable thead th:first-child {
-    background-color: #6c757d;
+
+table.schedule-table thead tr th:first-child {
+    background-color: var(--color-gray-800);
     left: 0;
-    z-index: 11;
+    z-index: 101;
+    /* Higher than other headers */
     width: 55px;
+    border: 1px solid var(--color-gray-900);
 }
-#mainScheduleTable tbody td:first-child {
-    background-color: #f2f2f2;
-    font-weight: bold;
+
+.schedule-table tbody td:first-child {
+    background-color: var(--color-gray-700);
+    color: var(--color-white);
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    font-size: 0.85em;
+    padding: 7px;
+    border-bottom: 1px solid var(--color-gray-600);
+    border-right: 1px solid var(--color-gray-600);
     position: sticky;
     left: 0;
-    z-index: 9;
-    white-space: nowrap;
-    width: 55px;
+    z-index: 90;
+    /* Lower than header (100) and top-left header (101) */
 }
-#mainScheduleTable td.editable-cell {
-    background-color: #e0e0e0;
+
+.schedule-table td.editable-cell {
+    background-color: var(--bg-editable);
     cursor: pointer;
 }
-#mainScheduleTable td.split-cell, #mainScheduleTable td.editable-cell:not(:empty) {
-    background-color: #ffffff;
+
+.schedule-table td.split-cell,
+.schedule-table td.editable-cell:not(:empty):not(.break-cell) {
+    background-color: var(--color-white);
 }
-#mainScheduleTable td.active-cell,
-#mainScheduleTable div.active-cell {
-    outline: 2px solid #FFD700;
-    box-shadow: inset 0 0 0 2px #FFD700;
+
+.schedule-table td.active-cell,
+.schedule-table div.active-cell {
+    outline: 2px solid var(--bg-active);
+    box-shadow: inset 0 0 0 2px var(--bg-active);
 }
-#mainScheduleTable td[contenteditable="true"],
-#mainScheduleTable div[contenteditable="true"] {
-    background-color: #ffffff;
-    box-shadow: inset 0 0 0 2px #007bff;
+
+.schedule-table td[contenteditable='true'],
+.schedule-table div[contenteditable='true'] {
+    background-color: var(--color-white);
+    box-shadow: inset 0 0 0 2px var(--color-secondary);
 }
 
 /* --- Specjalne style komórek grafiku --- */
-.break-cell {
-    background-color: #6c757d !important;
-    color: #fff !important;
+/* Zwiększona specyficzność przez dodanie tbody tr td aby nadpisać inne style */
+table.schedule-table tbody tr td.break-cell {
+    background-color: var(--bg-break);
+    color: var(--color-white);
     font-weight: bold;
     text-align: center;
-    cursor: default !important;
+    cursor: default;
 }
 
-.pnf-text, td.split-cell > div.pnf-text > span {
-    color: #007bff;
+.pnf-text,
+td.split-cell > div.pnf-text > span {
+    color: var(--bg-pnf);
     font-weight: bold;
 }
 
-.massage-text, td.split-cell > div.massage-text > span {
-    color: hotpink;
+.massage-text,
+td.split-cell > div.massage-text > span {
+    color: var(--bg-massage);
     font-weight: bold;
 }
+
+.every-other-day-text,
+td.split-cell > div.every-other-day-text > span {
+    color: var(--bg-every-other-day);
+    font-weight: bold;
+}
+
+/* --- Style dla legendy --- */
+.schedule-legend {
+    margin-top: var(--spacing-lg);
+    padding: var(--spacing-md);
+    background-color: #f9f9f9;
+    border: 1px solid var(--color-border);
+    border-radius: var(--border-radius);
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+    width: 100%;
+    box-sizing: border-box;
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: var(--spacing-md);
+}
+
+.schedule-legend h3 {
+    margin: 0;
+    color: var(--color-text);
+    font-size: 1.1em;
+    white-space: nowrap;
+}
+
+.patient-count-legend {
+    margin-left: auto;
+    font-weight: bold;
+    font-size: 1.1em;
+    color: var(--color-text);
+    white-space: nowrap;
+}
+
+.schedule-legend ul {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--spacing-md);
+}
+
+.schedule-legend li {
+    display: flex;
+    align-items: center;
+    font-size: 0.95em;
+    color: var(--color-text-light);
+}
+
+.legend-color {
+    display: inline-block;
+    width: 18px;
+    height: 18px;
+    border-radius: var(--border-radius-sm);
+    margin-right: 10px;
+    border: 1px solid #ccc;
+}
+
+.massage-color {
+    background-color: var(--bg-massage);
+}
+
+.pnf-color {
+    background-color: var(--bg-pnf);
+}
+
+.every-other-day-color {
+    background-color: var(--bg-every-other-day);
+}
+
+.break-color {
+    background-color: var(--bg-break);
+}
+
+/* --- Style dla ikon akcji w nagłówku po najechaniu kursorem (gdy są aktywne) --- */
+.schedule-action-buttons .action-icon-btn.active:hover {
+    background-color: rgba(0, 0, 0, 0.1);
+}
+
+#btnPatientInfo.active:hover i {
+    color: var(--color-secondary);
+}
+
+#btnMassage.active:hover i {
+    color: var(--bg-massage);
+}
+
+#btnPnf.active:hover i {
+    color: var(--bg-pnf);
+}
+
+#btnEveryOtherDay.active:hover i {
+    color: var(--bg-every-other-day);
+}
+
+#btnAddBreak.active:hover i {
+    color: var(--bg-break);
+}
+
+/* Zmiana koloru dla przerwy - powtórzenie usunięte, obsłużone wyżej */
 
 td.split-cell {
-    display: flex;
-    flex-direction: row;
     padding: 0;
+    height: 1px;
 }
 
-td.split-cell > div {
+/* Fix dla Firefox: height: 1px powoduje, że wrapper ma 1px wysokości.
+   height: 100% pozwala dziecku rozszerzyć się na całą wysokość komórki. */
+@-moz-document url-prefix() {
+    td.split-cell {
+        height: 100%;
+    }
+}
+
+.split-cell-wrapper {
+    display: flex;
+    flex-direction: row;
+    height: 100%;
+    width: 100%;
+}
+
+.split-cell-wrapper > div {
     flex: 1;
     display: flex;
     align-items: center;
     justify-content: center;
-    padding: 7px;
+    padding: var(--spacing-sm);
     text-align: center;
     overflow-wrap: break-word;
     word-wrap: break-word;
     white-space: normal;
+    /* border-bottom removed to avoid double border */
+    border-right: 1px solid var(--color-border);
+    font-size: 0.9em;
+    color: var(--color-text);
 }
 
-td.split-cell > div:first-child {
-    border-right: 1px solid #999;
+.split-cell-wrapper > div:last-child {
+    border-right: none;
 }
 
-.duplicate-highlight {
-    background-color: #ffeb3b !important;
+.split-cell-wrapper > div:first-child {
+    border-right: 1px solid var(--color-border-dark);
 }
 
-td.current-time-highlight {
-    background-color: #FFFF00 !important;
+/* Klasy podświetlenia - zwiększona specyficzność dla nadpisania stylów komórek */
+table.schedule-table tbody tr td.duplicate-highlight,
+table.schedule-table tbody tr td.duplicate-highlight.editable-cell {
+    background-color: var(--color-warning);
+}
+
+table.schedule-table tbody tr td.search-highlight,
+table.schedule-table tbody tr td.search-highlight.editable-cell {
+    background-color: var(--bg-search-highlight);
+    box-shadow: inset 0 0 0 2px var(--color-secondary);
+}
+
+table.schedule-table tbody tr.current-time-row > td:not(.break-cell) {
+    background-color: #fffde7;
+    /* Jasnożółte tło */
     font-weight: bold;
 }
 
+.schedule-table tbody tr.current-time-row > td:first-child {
+    color: var(--color-text);
+}
+
+td.current-time-highlight {
+    background-color: #ffff00;
+    font-weight: bold;
+}
+
+.treatment-end-marker {
+    position: relative;
+}
+
+.treatment-end-marker::after {
+    content: '\f0f3';
+    font-family: 'Font Awesome 5 Free';
+    font-weight: 900;
+    position: absolute;
+    top: 2px;
+    right: 2px;
+    color: var(--color-danger);
+    font-size: 0.8em;
+    animation: bell-ring 2s ease-in-out infinite;
+}
+
+@keyframes bell-ring {
+    0%,
+    50%,
+    100% {
+        transform: rotate(0);
+    }
+
+    5%,
+    15%,
+    25%,
+    35%,
+    45% {
+        transform: rotate(13deg);
+    }
+
+    10%,
+    20%,
+    30%,
+    40% {
+        transform: rotate(-13deg);
+    }
+}
+
 /* --- Modal Styles --- */
-.modal {
-    display: none; 
-    position: fixed; 
-    z-index: 1000; 
-    left: 0;
+.modal-overlay {
+    display: none;
+    position: fixed;
     top: 0;
-    width: 100%; 
-    height: 100%; 
-    overflow: auto; 
-    background-color: rgba(0,0,0,0.5); 
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.5);
+    z-index: 1000;
+    justify-content: center;
+    align-items: center;
+    overflow: auto;
 }
 
 .modal-content {
     background-color: #fefefe;
-    margin: 15% auto; 
     padding: 20px;
     border: 1px solid #888;
-    width: 80%; 
+    width: 80%;
     max-width: 500px;
-    border-radius: 8px;
-    text-align: center;
-    box-shadow: 0 4px 8px 0 rgba(0,0,0,0.2),0 6px 20px 0 rgba(0,0,0,0.19);
+    border-radius: var(--border-radius);
+    text-align: left;
+    box-shadow:
+        0 4px 8px 0 rgba(0, 0, 0, 0.2),
+        0 6px 20px 0 rgba(0, 0, 0, 0.19);
 }
 
 .modal-buttons {
@@ -150,16 +397,193 @@ td.current-time-highlight {
 }
 
 #moveEntryBtn {
-    background-color: #4CAF50;
+    background-color: var(--color-primary);
     color: white;
 }
 
 #addAnywayBtn {
-    background-color: #008CBA;
+    background-color: #008cba;
     color: white;
 }
 
 #cancelBtn {
-    background-color: #f44336;
+    background-color: var(--color-danger);
     color: white;
+}
+
+/* --- Style responsywne --- */
+/* --- Style responsywne --- */
+@media (max-width: 768px) {
+    .schedule-table {
+        display: none;
+        /* Hide table on mobile */
+    }
+
+    .mobile-schedule-container {
+        display: flex;
+        flex-direction: column;
+        gap: var(--spacing-md);
+        padding: var(--spacing-sm);
+    }
+
+    .appointment-card {
+        background-color: var(--color-white);
+        border-radius: var(--border-radius);
+        box-shadow: var(--shadow-sm);
+        border: 1px solid var(--color-gray-200);
+        overflow: hidden;
+        transition:
+            transform 0.2s,
+            box-shadow 0.2s;
+    }
+
+    .appointment-card:active {
+        transform: scale(0.98);
+    }
+
+    .card-header {
+        background-color: var(--color-gray-100);
+        padding: var(--spacing-sm) var(--spacing-md);
+        font-weight: bold;
+        color: var(--color-gray-700);
+        border-bottom: 1px solid var(--color-gray-200);
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+    }
+
+    .card-body {
+        padding: var(--spacing-md);
+        min-height: 40px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        text-align: center;
+        cursor: pointer;
+    }
+
+    .card-body.empty-slot {
+        color: var(--color-gray-400);
+        font-style: italic;
+        background-color: var(--color-gray-50);
+    }
+
+    /* Reuse existing text classes */
+    .massage-text {
+        color: var(--bg-massage);
+        font-weight: bold;
+    }
+
+    .pnf-text {
+        color: var(--bg-pnf);
+        font-weight: bold;
+    }
+
+    .every-other-day-text {
+        color: var(--bg-every-other-day);
+        font-weight: bold;
+    }
+
+    .break-cell {
+        background-color: var(--bg-break);
+        color: white;
+    }
+
+    .modal-content {
+        width: 95%;
+        margin: 10% auto;
+        padding: var(--spacing-md);
+    }
+}
+
+/* --- Style dla globalnego tooltipa pracownika --- */
+#globalEmployeeTooltip {
+    display: none;
+    position: absolute;
+    background-color: #333;
+    color: #fff;
+    padding: 8px 12px;
+    border-radius: 4px;
+    white-space: nowrap;
+    z-index: 9999;
+    font-size: 0.9em;
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+    pointer-events: none;
+}
+
+#globalEmployeeTooltip p {
+    margin: 0;
+    padding: 2px 0;
+}
+
+#globalEmployeeTooltip .employee-number-tooltip {
+    font-size: 1.1em;
+    font-weight: bold;
+    color: var(--bg-active);
+}
+
+/* Style dla ułożenia pól obok siebie w modalu */
+.form-row {
+    display: flex;
+    gap: 20px;
+    margin-bottom: 15px;
+}
+
+.form-row .form-group {
+    flex: 1;
+    margin-bottom: 0;
+}
+
+/* Style dla pola tekstowego Informacje dodatkowe */
+#additionalInfo {
+    width: 100%;
+    box-sizing: border-box;
+    resize: vertical;
+}
+
+/* Style dla pogrubionej i większej czcionki */
+.bold-large-font {
+    font-weight: bold;
+    font-size: 1.1em;
+}
+
+/* Style dla opcji płci w modalu */
+.patient-name-row {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 10px;
+}
+
+.patient-name-row label {
+    margin-right: 5px;
+}
+
+.patient-name-row input[type='text'] {
+    flex-grow: 1;
+    min-width: 150px;
+}
+
+.gender-options input[type='radio'] {
+    margin-right: 5px;
+}
+
+/* Style dla ikonki płci */
+.gender-icon {
+    display: inline-block;
+    margin-left: 8px;
+    font-family: 'Font Awesome 5 Free';
+    font-weight: 900;
+    font-size: 0.9em;
+    vertical-align: middle;
+}
+
+.gender-icon.male::before {
+    content: '\f222';
+    color: var(--color-secondary);
+}
+
+.gender-icon.female::before {
+    content: '\f221';
+    color: var(--bg-massage);
 }

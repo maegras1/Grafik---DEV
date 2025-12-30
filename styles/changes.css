@@ -1,0 +1,153 @@
+.changes-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: var(--spacing-lg);
+    box-shadow: var(--shadow-md);
+    background-color: var(--color-white);
+    border-radius: var(--border-radius);
+    overflow: hidden;
+}
+
+.changes-table th {
+    background-color: var(--color-primary-600);
+    color: var(--color-white);
+    padding: var(--spacing-md);
+    text-align: left;
+    font-weight: 600;
+    border: 1px solid var(--color-gray-200);
+    position: sticky;
+    top: 0;
+    z-index: 2;
+}
+
+.changes-table th:first-child {
+    background-color: var(--color-gray-700);
+}
+
+.changes-table td {
+    padding: var(--spacing-md);
+    border: 1px solid var(--color-gray-200);
+    text-align: center;
+    color: var(--color-text);
+}
+
+.changes-table tbody tr:hover {
+    background-color: var(--color-gray-50);
+}
+
+/* Employee Selection Modal Styles */
+#employeeSelectionModal .modal-content {
+    max-width: 800px;
+}
+
+#employeeSelectionModal .search-container {
+    margin-bottom: 15px;
+}
+
+#employeeSelectionModal .employee-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 10px;
+}
+
+#employeeSelectionModal .employee-list-item.disabled-employee {
+    background-color: #e9ecef;
+    color: #6c757d;
+    cursor: not-allowed;
+    border-color: #ced4da;
+}
+
+#employeeSelectionModal .employee-list-item.disabled-employee:hover {
+    background-color: #e9ecef;
+}
+
+#employeeSelectionModal .employee-list-item {
+    padding: var(--spacing-sm);
+    border: 1px solid var(--color-gray-300);
+    border-radius: var(--border-radius-sm);
+    text-align: center;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    background-color: var(--color-white);
+}
+
+#employeeSelectionModal .employee-list-item:hover {
+    background-color: var(--color-gray-100);
+    border-color: var(--color-gray-400);
+}
+
+#employeeSelectionModal .employee-list-item.selected-employee {
+    background-color: var(--color-primary-50);
+    border-color: var(--color-primary-500);
+    color: var(--color-primary-700);
+    font-weight: bold;
+    box-shadow: 0 0 0 1px var(--color-primary-500);
+}
+
+/* Styl dla wierszy reprezentujących przeszłe okresy */
+.changes-table tbody tr.past-period td {
+    color: #a0a0a0;
+    /* Wyszarzony tekst */
+}
+
+/* New Header Layout consistent with leaves page */
+.changes-header-controls {
+    display: flex;
+    justify-content: flex-end;
+    align-items: center;
+    border-bottom: 2px solid var(--color-gray-300);
+    margin-bottom: var(--spacing-lg);
+    padding-bottom: 5px;
+    margin-top: 12px;
+}
+
+.year-selector-container {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.year-selector-container label {
+    margin-bottom: 0;
+    font-weight: bold;
+    font-size: 1.1em;
+}
+
+.year-select {
+    padding: 10px 15px;
+    font-size: 1.2em;
+    font-weight: bold;
+    border: 2px solid var(--color-primary-600);
+    border-radius: var(--border-radius-sm);
+    background-color: var(--color-white);
+    color: var(--color-primary-600);
+    cursor: pointer;
+    min-width: 150px;
+    transition: all 0.2s ease-in-out;
+    box-shadow: var(--shadow-sm);
+}
+
+.year-select:hover {
+    border-color: var(--color-primary-700);
+    color: var(--color-primary-700);
+    box-shadow: var(--shadow-md);
+}
+
+.year-select:focus {
+    outline: none;
+    border-color: var(--color-primary-700);
+    box-shadow: 0 0 0 3px rgba(var(--color-primary-rgb), 0.2);
+}
+
+@media (max-width: 768px) {
+    .changes-header-controls {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: var(--spacing-md);
+    }
+
+    .year-selector-container {
+        width: 100%;
+        justify-content: space-between;
+    }
+}

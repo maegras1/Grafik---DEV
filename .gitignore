@@ -1,0 +1,25 @@
+# Dependencies
+node_modules/
+
+# Build output
+dist/
+
+# Environment/Secrets
+firebase-config.js
+firebase-config.ts
+
+# Documentation (auto-generated)
+documentation.md
+
+# Logs
+*.log
+npm-debug.log*
+
+# IDE
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db

@@ -1,0 +1,44 @@
+<div class="scrapped-pdfs-container">
+    <h1>Dostępne Dokumenty PDF</h1>
+
+    <div class="search-and-info">
+        <p>Lista dokumentów pobranych automatycznie. Użyj pola wyszukiwania w górnym pasku, aby filtrować wyniki.</p>
+        <button id="refreshPdfsBtn" class="refresh-btn" title="Pobierz najnowsze dokumenty">
+            <i class="fas fa-sync-alt"></i><span>Odśwież</span>
+        </button>
+    </div>
+
+    <div id="pdf-table-container" style="display: none">
+        <table class="modern-table">
+            <thead>
+                <tr>
+                    <th>Data</th>
+                    <th>Typ dokumentu</th>
+                    <th>Tytuł</th>
+                </tr>
+            </thead>
+            <tbody id="pdf-table-body"></tbody>
+        </table>
+    </div>
+
+    <div id="pdf-links-container"></div>
+
+    <!-- PDF Viewer Modal -->
+    <div id="pdfModal" class="modal-overlay" style="display: none;">
+        <div class="modal-content pdf-modal-content">
+            <div class="pdf-modal-header">
+                <h2 id="pdfModalTitle">Podgląd dokumentu</h2>
+                <div class="pdf-modal-controls">
+                    <a id="pdfOpenNewTabBtn" href="#" target="_blank" class="action-btn secondary"
+                        title="Otwórz w nowym oknie, jeśli podgląd nie działa">
+                        <i class="fas fa-external-link-alt"></i> Otwórz w nowym oknie
+                    </a>
+                    <button id="pdfCloseBtn" class="action-btn outline">Zamknij</button>
+                </div>
+            </div>
+            <div class="pdf-modal-body">
+                <iframe id="pdfIframe" src="" frameborder="0"></iframe>
+            </div>
+        </div>
+    </div>
+</div>

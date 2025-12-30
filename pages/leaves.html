@@ -1,0 +1,106 @@
+<div class="leaves-header-controls">
+    <div class="view-tabs">
+        <button id="monthlyViewBtn" class="tab-btn active">Widok Miesięczny</button>
+        <button id="summaryViewBtn" class="tab-btn">Podsumowanie Roczne</button>
+        <button id="careViewBtn" class="tab-btn">Opieka</button>
+    </div>
+    <div class="year-selector-container">
+        <label for="yearSelect">Rok:</label>
+        <select id="yearSelect" class="year-select"></select>
+    </div>
+</div>
+
+<div
+    id="leavesFilterContainer"
+    class="leaves-filter-container"
+    style="padding: 10px; background-color: #f8f9fa; border-radius: 5px; margin-bottom: 15px"
+>
+    <div id="leavesLegend" class="leaves-legend"></div>
+    <button id="currentYearBtn" class="action-btn secondary" style="margin-left: auto">Ten Rok</button>
+    <button id="clearFiltersBtn" class="action-btn outline">Wyczyść filtry</button>
+</div>
+
+<table id="leavesTable" class="leaves-table">
+    <thead>
+        <tr id="leavesHeaderRow"></tr>
+    </thead>
+    <tbody id="leavesTableBody"></tbody>
+</table>
+
+<div id="careViewContainer" style="display: none"></div>
+
+<div id="contextMenu" class="context-menu">
+    <ul>
+        <li id="contextOpenCalendar"><i class="fas fa-calendar-alt"></i><span>Otwórz kalendarz</span></li>
+        <li id="contextClearCell" class="danger"><i class="fas fa-times"></i><span>Wyczyść komórkę</span></li>
+    </ul>
+</div>
+
+<div id="calendarModal" class="modal-overlay" style="display: none">
+    <div class="modal-content wide">
+        <div class="calendar-scroll-area">
+            <div class="calendar-header">
+                <button id="prevMonthBtn" class="nav-btn"><i class="fas fa-chevron-left"></i></button>
+                <div class="calendars-container">
+                    <div class="calendar-slider-viewport">
+                        <div class="calendar-slider"></div>
+                    </div>
+                </div>
+                <button id="nextMonthBtn" class="nav-btn"><i class="fas fa-chevron-right"></i></button>
+            </div>
+        </div>
+        <div class="modal-footer">
+            <div
+                class="calendar-footer-top"
+                style="
+                    display: flex;
+                    justify-content: space-between;
+                    align-items: flex-end;
+                    width: 100%;
+                    margin-bottom: 15px;
+                    flex-wrap: wrap;
+                    gap: 15px;
+                "
+            >
+                <div class="leave-type-selector" style="text-align: left">
+                    <label for="leaveTypeSelect">Wybierz typ urlopu</label>
+                    <div class="leave-type-input-group" style="display: flex; align-items: center; gap: 10px">
+                        <span
+                            id="leaveTypeColorIndicator"
+                            class="color-indicator-box"
+                            style="
+                                display: inline-block;
+                                width: 24px;
+                                height: 24px;
+                                border-radius: 4px;
+                                border: 1px solid #ccc;
+                            "
+                        ></span>
+                        <select id="leaveTypeSelect" class="modal-select" style="flex-grow: 1">
+                            <option value="vacation" selected>Wypoczynkowy</option>
+                            <option value="child_care_art_188">Opieka nad zdrowym dzieckiem</option>
+                            <option value="sick_child_care">Opieka nad chorym dzieckiem</option>
+                            <option value="family_member_care">Opieka chorym członkiem rodziny</option>
+                            <option value="schedule_pickup">Wybicie za święto</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="calendar-selection-info" style="display: flex; gap: 20px; align-items: center">
+                    <p><strong>Start:</strong> <span id="startDatePreview">-</span></p>
+                    <p><strong>Koniec:</strong> <span id="endDatePreview">-</span></p>
+                    <p><strong>Zaplanowano dni:</strong> <span id="workdaysCounter">0</span></p>
+                </div>
+            </div>
+            <div class="selection-mode-info">
+                <p><kbd>Ctrl</kbd> + klik, aby zaznaczyć pojedyncze dni.</p>
+            </div>
+            <!-- leaveTypeLegend removed as per request -->
+            <div class="modal-actions">
+                <button id="clearSelectionBtn" class="action-btn secondary">Wyczyść</button>
+
+                <button id="confirmSelectionBtn" class="action-btn primary">Zapisz i zamknij</button>
+                <button id="cancelSelectionBtn" class="action-btn outline">Anuluj</button>
+            </div>
+        </div>
+    </div>
+</div>

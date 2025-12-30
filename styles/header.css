@@ -1,94 +1,418 @@
-/* Style dla nagłówka aplikacji i nawigacji */
-
 .app-header {
-    background-color: #ADD8E6;
-    color: #333;
-    padding: 10px 20px;
-    min-height: 40px;
-    border-radius: 0 0 8px 8px;
-    box-shadow: 0 2px 5px rgba(0,0,0,0.1);
     display: flex;
     justify-content: space-between;
     align-items: center;
-    position: sticky;
-    top: 0;
+    padding: 10px 20px;
+    background-color: rgba(5, 150, 105, 0.85);
+    /* Emerald Green with opacity */
+    backdrop-filter: blur(10px);
+    /* Emerald Green Header */
+    color: var(--color-white);
+    /* position: sticky removed - handled by flex layout */
     z-index: 1000;
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    position: relative;
+    /* Ensure z-index context works reliably */
 }
+
 .banner-left-content {
     display: flex;
     align-items: center;
-    gap: 10px;
 }
+
 .banner-logo {
     height: 40px;
+    margin-right: 15px;
 }
+
 .banner-title {
     font-size: 1.5em;
     font-weight: bold;
 }
+
 .date-time-text {
-    flex-grow: 1;
-    text-align: center;
-    margin: 0 20px;
-    font-size: 1.2em;
+    font-size: 1em;
 }
+
 .header-right-menu {
     display: flex;
     align-items: center;
     gap: 15px;
+    margin-right: 50px;
+    /* Przestrzeń na fixed hamburger na desktopie */
 }
 
-/* --- Hamburger Menu --- */
-.hamburger-menu {
+.schedule-action-buttons {
+    display: flex;
+    gap: 10px;
+    margin-right: 15px;
+    /* Odstęp między przyciskami a wyszukiwarką */
+}
+
+.action-icon-btn {
+    background: none;
+    border: none;
+    color: rgba(255, 255, 255, 0.6);
+    /* Slightly more visible default */
+    font-size: 1.5em;
+    cursor: not-allowed;
+    /* Domyślnie nieaktywny kursor */
+    padding: 5px;
+    border-radius: 5px;
+    transition:
+        background-color 0.2s ease,
+        color 0.2s ease,
+        cursor 0.2s ease;
+}
+
+.action-icon-btn.active {
+    color: white;
+    /* Wyraźniejszy kolor, gdy aktywny */
     cursor: pointer;
-    padding: 10px;
-    border-radius: 50%;
-    transition: background-color 0.3s;
-    font-size: 1.4em;
+}
+
+.action-icon-btn.active:hover {
+    background-color: rgba(255, 255, 255, 0.2);
+    color: #f0f0f0;
+}
+
+.action-icon-btn.danger.active {
+    color: #dc3545;
+    /* Czerwony kolor dla przycisków "niebezpiecznych" aktywnych */
+}
+
+.action-icon-btn.danger.active:hover {
+    background-color: rgba(220, 53, 69, 0.2);
+    color: #fff;
+}
+
+.search-container {
+    position: relative;
+    width: 40px;
+    /* Reserve space for icon */
+    height: 40px;
     display: flex;
     align-items: center;
     justify-content: center;
 }
-.hamburger-menu:hover, .hamburger-menu.active {
-    background-color: rgba(0, 0, 0, 0.1);
+
+.search-input {
+    padding: 8px 12px 8px 35px;
+    /* Add space for icon */
+    border-radius: 20px;
+    border: 1px solid rgba(255, 255, 255, 0.3);
+    background-color: rgba(255, 255, 255, 0.15);
+    /* Glassy effect */
+    color: var(--color-white);
+    transition:
+        width 0.3s ease,
+        background-color 0.3s,
+        opacity 0.2s;
+    width: 0;
+    /* Hidden by default */
+    opacity: 0;
+    pointer-events: none;
+    position: absolute;
+    right: 0;
+    top: 50%;
+    transform: translateY(-50%);
 }
+
+.search-input.expanded {
+    width: 200px;
+    opacity: 1;
+    pointer-events: auto;
+    background-color: var(--color-white);
+    color: var(--color-gray-800);
+}
+
+.search-input::placeholder {
+    color: rgba(255, 255, 255, 0.7);
+}
+
+.search-input:focus {
+    background-color: var(--color-white);
+    color: var(--color-gray-800);
+    outline: none;
+}
+
+.search-toggle-btn {
+    background: none;
+    border: none;
+    color: var(--color-white);
+    font-size: 1.3em;
+    cursor: pointer;
+    padding: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    position: relative;
+    z-index: 3;
+    transition: transform 0.2s ease;
+}
+
+.search-toggle-btn:hover {
+    background-color: rgba(255, 255, 255, 0.1);
+    border-radius: 50%;
+}
+
+.clear-search-btn {
+    position: absolute;
+    right: 40px;
+    /* Move X to the left of the magnifying glass icon */
+    top: 50%;
+    transform: translateY(-50%);
+    background: none;
+    border: none;
+    color: rgba(255, 255, 255, 0.7);
+    cursor: pointer;
+    font-size: 1.2em;
+    padding: 5px;
+    z-index: 4;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: color 0.2s ease;
+}
+
+.clear-search-btn:hover {
+    color: var(--color-white);
+}
+
+.search-input.expanded {
+    width: 250px;
+    opacity: 1;
+    pointer-events: auto;
+    background-color: var(--color-white);
+    color: var(--color-gray-800);
+    padding-right: 70px;
+    /* Room for both X and magnifying glass */
+}
+
+/* undo-button class removed, replaced by action-icon-btn */
+
+.save-status {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 5px 10px;
+    border-radius: 5px;
+    font-size: 0.9em;
+}
+
+.save-status.saving {
+    color: #f0ad4e;
+    /* Orange */
+}
+
+.save-status.saved {
+    color: #5cb85c;
+    /* Green */
+}
+
+.save-status.error {
+    color: #d9534f;
+    /* Red */
+}
+
+/* Hamburger Menu - Fixed position to avoid backdrop-filter trapping */
+.hamburger-menu {
+    position: fixed;
+    top: 10px;
+    right: 20px;
+    z-index: 3000;
+    font-size: 1.8em;
+    cursor: pointer;
+    color: white;
+    width: 44px;
+    height: 44px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: transform 0.2s, background-color 0.2s, bottom 0.3s, right 0.3s;
+}
+
+.hamburger-menu:hover {
+    color: var(--color-primary-200);
+}
+
 .nav-panel {
     position: fixed;
-    top: 0;
-    right: -280px; /* Start off-screen */
-    width: 250px;
-    height: 100%;
-    background-color: #333;
-    box-shadow: -2px 0 5px rgba(0,0,0,0.5);
+    top: 60px;
+    /* Height of the header */
+    right: -300px;
+    /* Start off-screen */
+    width: 280px;
+    height: calc(100% - 60px);
+    background-color: #2c2c2c;
+    box-shadow: -5px 0 15px rgba(0, 0, 0, 0.2);
     transition: right 0.3s ease-in-out;
-    z-index: 9999;
-    padding-top: 60px;
+    z-index: 1001;
     display: flex;
     flex-direction: column;
-    padding-bottom: 50px; /* Dodatkowe miejsce na stopkę */
 }
+
 .nav-panel.visible {
-    right: 0; /* Slide in */
+    right: 0;
 }
+
+.nav-panel .user-info {
+    padding: 15px 25px 10px;
+    color: #aaa;
+    font-size: 0.9em;
+    border-bottom: 1px solid #444;
+    margin-bottom: 10px;
+}
+
 .nav-panel ul {
     list-style: none;
     padding: 0;
     margin: 0;
-    flex-grow: 1; /* Pozwala na rozciąganie listy */
-    overflow-y: auto; /* Włącza przewijanie, jeśli lista jest za długa */
+    overflow-y: auto;
 }
-.nav-panel a {
+
+.nav-panel .main-nav-list {
+    flex-grow: 1;
+    /* This list takes available space */
+}
+
+.nav-panel .logout-nav-list {
+    flex-grow: 0;
+    margin-top: auto;
+    /* Push to bottom if needed, though flex-grow on main list handles it */
+}
+
+.nav-panel li {
+    border-bottom: 1px solid #444;
+    /* Linia pod każdym elementem listy */
+}
+
+.nav-panel li:last-of-type {
+    border-bottom: none;
+    /* Brak linii pod ostatnim elementem */
+}
+
+.nav-panel li a {
     display: block;
     padding: 15px 25px;
-    color: white;
+    color: #f0f0f0;
     text-decoration: none;
-    font-size: 1.2em;
-    border-bottom: 1px solid #444;
-    transition: background-color 0.3s;
+    font-size: 1.1em;
+    transition:
+        background-color 0.2s,
+        border-left-color 0.2s;
+    /* Dodaj transition dla border-left-color */
+    border-left: 5px solid transparent;
+    /* Niewidoczne obramowanie po lewej */
 }
-.nav-panel a:hover {
-    background-color: #555;
+
+.nav-panel li a:hover,
+.nav-panel li a.active {
+    background-color: #444;
+    border-left-color: #007bff;
+    /* Niebieskie obramowanie po najechaniu/aktywnym */
 }
-.nav-panel a.active {
-    background-color: #4CAF50;
+
+/* Specjalny styl dla przycisku wylogowania */
+.nav-panel li#logoutBtnContainer a:hover {
+    background-color: #dc3545;
+    /* Czerwone tło po najechaniu */
+    border-left-color: #dc3545;
+    /* Czerwone obramowanie po najechaniu */
+}
+
+.nav-panel li a i {
+    margin-right: 15px;
+    width: 20px;
+    /* Align icons */
+    text-align: center;
+}
+
+.footer-info {
+    padding: 20px;
+    text-align: center;
+    font-size: 0.8em;
+    color: #888;
+    border-top: 1px solid #444;
+    margin-top: auto;
+    /* Przypnij stopkę do dołu */
+    background-color: #222;
+    /* Ciemniejsze tło dla stopki */
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+    .date-time-text {
+        display: none;
+    }
+
+    /* Ensure search container is visible on mobile */
+    .search-container {
+        display: block;
+    }
+
+    .header-right-menu {
+        margin-right: 0;
+    }
+
+    .hamburger-menu {
+        display: flex;
+        bottom: 30px;
+        right: 30px;
+        top: auto;
+        width: 60px;
+        height: 60px;
+        background-color: var(--color-primary-600);
+        border-radius: 50%;
+        box-shadow: var(--shadow-xl);
+        color: white;
+    }
+
+    .hamburger-menu:hover {
+        color: white;
+        background-color: var(--color-primary-700);
+    }
+
+    .hamburger-menu:active {
+        transform: scale(0.9);
+    }
+
+    .hamburger-menu i {
+        font-size: 1.5rem;
+    }
+}
+
+@media (max-width: 480px) {
+    .banner-title {
+        display: none;
+    }
+}
+
+/* Notification Badge */
+.notification-badge {
+    position: absolute;
+    top: 0;
+    right: 0;
+    width: 10px;
+    height: 10px;
+    background-color: var(--color-danger);
+    border-radius: 50%;
+    border: 2px solid var(--color-primary-600);
+    /* Match header background */
+    display: none;
+    /* Hidden by default */
+}
+
+#btnIso {
+    position: relative;
+    /* For badge positioning */
+    color: rgba(255, 255, 255, 0.4);
+    /* Default state */
+    cursor: pointer;
+    /* Always clickable */
+}
+
+#btnIso:hover {
+    color: white;
 }
