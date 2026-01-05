@@ -1,48 +1,10 @@
 // scripts/schedule-events.ts
+import { debugLog } from './common.js';
 import { AppConfig } from './common.js';
 import { initializeContextMenu, destroyContextMenu } from './context-menu.js';
-import { safeCopy, safeBool } from './utils.js';
-
-/**
- * Stan komórki harmonogramu
- */
-interface CellState {
-    content?: string | null;
-    content1?: string | null;
-    content2?: string | null;
-    isSplit?: boolean | null;
-    isBreak?: boolean | null;
-    isMassage?: boolean | null;
-    isPnf?: boolean | null;
-    isEveryOtherDay?: boolean | null;
-    isMassage1?: boolean | null;
-    isMassage2?: boolean | null;
-    isPnf1?: boolean | null;
-    isPnf2?: boolean | null;
-    isEveryOtherDay1?: boolean | null;
-    isEveryOtherDay2?: boolean | null;
-    treatmentStartDate?: string | null;
-    treatmentExtensionDays?: number | null;
-    treatmentEndDate?: string | null;
-    additionalInfo?: string | null;
-    treatmentData1?: TreatmentData | null;
-    treatmentData2?: TreatmentData | null;
-    history?: HistoryEntry[];
-    [key: string]: unknown;
-}
-
-interface TreatmentData {
-    startDate?: string | null;
-    extensionDays?: number | null;
-    endDate?: string | null;
-    additionalInfo?: string | null;
-}
-
-interface HistoryEntry {
-    oldValue: string;
-    timestamp: string;
-    userId: string;
-}
+import { safeCopy } from './utils.js';
+import { ScheduleDragDrop } from './schedule-drag-drop.js';
+import type { CellState } from './types/index.js';
 
 interface AppState {
     scheduleCells: Record<string, Record<string, CellState>>;
@@ -77,11 +39,6 @@ interface Dependencies {
 interface ScheduleEventsAPI {
     initialize(deps: Dependencies): void;
     destroy(): void;
-    _handleDragStart(event: DragEvent): void;
-    _handleDrop(event: DragEvent): void;
-    _handleDragOver(event: DragEvent): void;
-    _handleDragLeave(event: DragEvent): void;
-    _handleDragEnd(): void;
 }
 
 /**
@@ -91,7 +48,7 @@ export const ScheduleEvents: ScheduleEventsAPI = (() => {
     let _dependencies: Dependencies;
     let mainTable: HTMLTableElement | null = null;
     let activeCell: HTMLElement | null = null;
-    let draggedCell: HTMLElement | null = null;
+    let copiedCellState: CellState | null = null;
 
     const _handleMainTableClick = (event: MouseEvent): void => {
         const target = (event.target as HTMLElement).closest('td.editable-cell, div[tabindex="0"]') as HTMLElement | null;
@@ -153,11 +110,6 @@ export const ScheduleEvents: ScheduleEventsAPI = (() => {
             }
             setActiveCell(null);
         }
-    };
-
-    const _handleDragLeave = (event: DragEvent): void => {
-        const target = (event.target as HTMLElement).closest('.drag-over-target');
-        if (target) target.classList.remove('drag-over-target');
     };
 
     const _handleAppSearch = (e: Event): void => {
@@ -260,140 +212,6 @@ export const ScheduleEvents: ScheduleEventsAPI = (() => {
         }
     };
 
-    const _handleDragStart = (event: DragEvent): void => {
-        const target = (event.target as HTMLElement).closest('td.editable-cell') as HTMLTableCellElement | null;
-        if (target && !target.classList.contains('break-cell') && event.dataTransfer) {
-            draggedCell = target;
-            event.dataTransfer.setData(
-                'application/json',
-                JSON.stringify(_dependencies.getCurrentTableStateForCell(target))
-            );
-            event.dataTransfer.effectAllowed = 'move';
-            draggedCell.classList.add('is-dragging');
-        } else {
-            event.preventDefault();
-        }
-    };
-
-    const _handleDragOver = (event: DragEvent): void => {
-        event.preventDefault();
-        const dropTargetCell = (event.target as HTMLElement).closest('td.editable-cell') as HTMLTableCellElement | null;
-        document.querySelectorAll('.drag-over-target').forEach((el) => el.classList.remove('drag-over-target'));
-        if (dropTargetCell && !dropTargetCell.classList.contains('break-cell') && draggedCell !== dropTargetCell && event.dataTransfer) {
-            event.dataTransfer.dropEffect = 'move';
-            dropTargetCell.classList.add('drag-over-target');
-        } else if (event.dataTransfer) {
-            event.dataTransfer.dropEffect = 'none';
-        }
-    };
-
-    const _handleDrop = (event: DragEvent): void => {
-        event.preventDefault();
-        const dropTargetCell = (event.target as HTMLElement).closest('td.editable-cell') as HTMLTableCellElement | null;
-        document.querySelectorAll('.drag-over-target').forEach((el) => el.classList.remove('drag-over-target'));
-
-        if (dropTargetCell && !dropTargetCell.classList.contains('break-cell') && draggedCell && draggedCell !== dropTargetCell) {
-            const sourceTime = draggedCell.dataset.time!;
-            const sourceIndex = draggedCell.dataset.employeeIndex!;
-            const targetTime = dropTargetCell.dataset.time!;
-            const targetIndex = dropTargetCell.dataset.employeeIndex!;
-
-            let targetPart: number | null = null;
-            const eventTarget = event.target as HTMLElement;
-            if (eventTarget.tagName === 'DIV' && eventTarget.parentElement?.classList.contains('split-cell-wrapper')) {
-                targetPart = eventTarget === eventTarget.parentElement.children[0] ? 1 : 2;
-            }
-
-            const sourceCellState = _dependencies.appState.scheduleCells[sourceTime]?.[sourceIndex] || {};
-
-            const sourceContentString = sourceCellState.isSplit
-                ? `${sourceCellState.content1 || ''}/${sourceCellState.content2 || ''}`
-                : sourceCellState.content;
-
-            if (!sourceContentString || sourceContentString.trim() === '') {
-                return;
-            }
-
-            const contentKeys = [
-                'content', 'content1', 'content2', 'isSplit', 'isMassage', 'isPnf', 'isEveryOtherDay',
-                'treatmentStartDate', 'treatmentExtensionDays', 'treatmentEndDate', 'additionalInfo',
-                'treatmentData1', 'treatmentData2', 'isMassage1', 'isMassage2', 'isPnf1', 'isPnf2'
-            ];
-
-            const updates = [
-                {
-                    time: targetTime,
-                    employeeIndex: targetIndex,
-                    updateFn: (targetState: CellState) => {
-                        if (targetPart && targetState.isSplit) {
-                            let contentToMove = sourceCellState.content;
-                            const isMassage = sourceCellState.isMassage;
-                            const isPnf = sourceCellState.isPnf;
-                            const isEveryOtherDay = sourceCellState.isEveryOtherDay;
-                            const treatmentData = {
-                                startDate: sourceCellState.treatmentStartDate,
-                                extensionDays: sourceCellState.treatmentExtensionDays,
-                                endDate: sourceCellState.treatmentEndDate,
-                                additionalInfo: sourceCellState.additionalInfo,
-                            };
-
-                            if (sourceCellState.isSplit) {
-                                contentToMove = sourceCellState.content1;
-                            }
-
-                            targetState[`content${targetPart}`] = safeCopy(contentToMove);
-                            targetState[`isMassage${targetPart}`] = safeBool(isMassage);
-                            targetState[`isPnf${targetPart}`] = safeBool(isPnf);
-                            targetState[`isEveryOtherDay${targetPart}`] = safeBool(isEveryOtherDay);
-
-                            targetState[`treatmentData${targetPart}`] = {
-                                startDate: safeCopy(treatmentData.startDate),
-                                extensionDays: safeCopy(treatmentData.extensionDays),
-                                endDate: safeCopy(treatmentData.endDate),
-                                additionalInfo: safeCopy(treatmentData.additionalInfo),
-                            };
-
-                            targetState.treatmentStartDate = null;
-                            targetState.treatmentExtensionDays = null;
-                            targetState.treatmentEndDate = null;
-                            targetState.additionalInfo = null;
-                            targetState.content = null;
-                            targetState.isMassage = null;
-                            targetState.isPnf = null;
-                            targetState.isEveryOtherDay = null;
-                        } else {
-                            for (const key of contentKeys) {
-                                delete targetState[key];
-                            }
-                            for (const key of contentKeys) {
-                                if (sourceCellState[key] !== undefined) {
-                                    targetState[key] = sourceCellState[key];
-                                }
-                            }
-                        }
-                    },
-                },
-                {
-                    time: sourceTime,
-                    employeeIndex: sourceIndex,
-                    updateFn: (sourceState: CellState) => {
-                        for (const key of contentKeys) {
-                            sourceState[key] = null;
-                        }
-                    },
-                },
-            ];
-
-            _dependencies.updateMultipleCells(updates);
-        }
-    };
-
-    const _handleDragEnd = (): void => {
-        draggedCell?.classList.remove('is-dragging');
-        draggedCell = null;
-        document.querySelectorAll('.drag-over-target').forEach((el) => el.classList.remove('drag-over-target'));
-    };
-
     const _handleArrowNavigation = (key: string, currentCell: HTMLElement): void => {
         let nextElement: HTMLElement | null = null;
         const currentParentTd = currentCell.closest('td, th') as HTMLTableCellElement | null;
@@ -468,6 +286,49 @@ export const ScheduleEvents: ScheduleEventsAPI = (() => {
             return;
         }
 
+        // Ctrl+C - Kopiuj zaznaczoną komórkę
+        if ((event.ctrlKey || event.metaKey) && event.key === 'c') {
+            if (activeCell && !activeCell.classList.contains('break-cell')) {
+                const parentCell = activeCell.closest('td[data-time][data-employee-index]') as HTMLTableCellElement | null;
+                if (parentCell) {
+                    const time = parentCell.dataset.time || '';
+                    const employeeIndex = parentCell.dataset.employeeIndex || '';
+                    const currentState = _dependencies.appState.scheduleCells[time]?.[employeeIndex];
+
+                    if (currentState && Object.keys(currentState).length > 0) {
+                        // Głęboka kopia stanu komórki
+                        copiedCellState = JSON.parse(JSON.stringify(currentState));
+                        window.showToast('Skopiowano komórkę');
+                    } else {
+                        window.showToast('Brak danych do skopiowania', 2000);
+                    }
+                }
+            } else if (!activeCell) {
+                window.showToast('Wybierz komórkę, aby skopiować.', 2000);
+            }
+            return;
+        }
+
+        // Ctrl+V - Wklej do zaznaczonej komórki
+        if ((event.ctrlKey || event.metaKey) && event.key === 'v') {
+            event.preventDefault();
+            if (!activeCell) {
+                window.showToast('Wybierz komórkę, aby wkleić.', 2000);
+                return;
+            }
+            if (!copiedCellState) {
+                window.showToast('Brak skopiowanej komórki.', 2000);
+                return;
+            }
+
+            _dependencies.updateCellState(activeCell, (state) => {
+                // Kopiuj wszystkie właściwości ze skopiowanego stanu
+                Object.assign(state, JSON.parse(JSON.stringify(copiedCellState)));
+                window.showToast('Wklejono komórkę');
+            });
+            return;
+        }
+
         const target = document.activeElement as HTMLElement;
         const isEditing = target?.getAttribute('contenteditable') === 'true';
 
@@ -538,15 +399,22 @@ export const ScheduleEvents: ScheduleEventsAPI = (() => {
             return;
         }
 
+        // Inicjalizacja modułu Drag & Drop
+        ScheduleDragDrop.initialize({
+            appState: deps.appState,
+            getCurrentTableStateForCell: deps.getCurrentTableStateForCell,
+            updateMultipleCells: deps.updateMultipleCells,
+        });
+
         const appRoot = document.getElementById('app-root');
         if (appRoot) {
             appRoot.addEventListener('click', _handleMainTableClick as EventListener);
             appRoot.addEventListener('dblclick', _handleMainTableDblClick as EventListener);
-            mainTable.addEventListener('dragstart', _handleDragStart as EventListener);
-            mainTable.addEventListener('dragover', _handleDragOver as EventListener);
-            mainTable.addEventListener('dragleave', _handleDragLeave as EventListener);
-            mainTable.addEventListener('drop', _handleDrop as EventListener);
-            mainTable.addEventListener('dragend', _handleDragEnd);
+            mainTable.addEventListener('dragstart', ScheduleDragDrop.handleDragStart as EventListener);
+            mainTable.addEventListener('dragover', ScheduleDragDrop.handleDragOver as EventListener);
+            mainTable.addEventListener('dragleave', ScheduleDragDrop.handleDragLeave as EventListener);
+            mainTable.addEventListener('drop', ScheduleDragDrop.handleDrop as EventListener);
+            mainTable.addEventListener('dragend', ScheduleDragDrop.handleDragEnd);
         } else {
             console.error('ScheduleEvents.initialize: app-root not found.');
         }
@@ -795,30 +663,26 @@ export const ScheduleEvents: ScheduleEventsAPI = (() => {
             appRoot.removeEventListener('dblclick', _handleMainTableDblClick as EventListener);
         }
         if (mainTable) {
-            mainTable.removeEventListener('dragstart', _handleDragStart as EventListener);
-            mainTable.removeEventListener('dragover', _handleDragOver as EventListener);
-            mainTable.removeEventListener('dragleave', _handleDragLeave as EventListener);
-            mainTable.removeEventListener('drop', _handleDrop as EventListener);
-            mainTable.removeEventListener('dragend', _handleDragEnd);
+            mainTable.removeEventListener('dragstart', ScheduleDragDrop.handleDragStart as EventListener);
+            mainTable.removeEventListener('dragover', ScheduleDragDrop.handleDragOver as EventListener);
+            mainTable.removeEventListener('dragleave', ScheduleDragDrop.handleDragLeave as EventListener);
+            mainTable.removeEventListener('drop', ScheduleDragDrop.handleDrop as EventListener);
+            mainTable.removeEventListener('dragend', ScheduleDragDrop.handleDragEnd);
         }
         document.removeEventListener('click', _handleDocumentClick as EventListener);
         document.removeEventListener('keydown', _handleKeyDown);
         document.removeEventListener('app:search', _handleAppSearch);
 
         destroyContextMenu('contextMenu');
+        ScheduleDragDrop.destroy();
 
         activeCell = null;
-        console.log('ScheduleEvents destroyed');
+        debugLog('ScheduleEvents destroyed');
     };
 
     return {
         initialize,
         destroy,
-        _handleDragStart,
-        _handleDrop,
-        _handleDragOver,
-        _handleDragLeave,
-        _handleDragEnd,
     };
 })();
 

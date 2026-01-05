@@ -1,19 +1,17 @@
 // scripts/leaves.ts
+import { debugLog } from './common.js';
 import { db as dbRaw } from './firebase-config.js';
 import { AppConfig, hideLoadingOverlay, UndoManager } from './common.js';
 import { EmployeeManager } from './employee-manager.js';
 import { LeavesSummary } from './leaves-summary.js';
 import { LeavesCareSummary } from './leaves-care-summary.js';
 import { CalendarModal } from './calendar-modal.js';
+import { toUTCDate } from './utils.js';
+import { printLeavesTableToPdf } from './leaves-pdf.js';
 import type { FirestoreDbWrapper } from './types/firebase';
 import type { Employee, LeaveEntry } from './types';
 
 const db = dbRaw as unknown as FirestoreDbWrapper;
-
-// pdfMake type declaration
-declare const pdfMake: {
-    createPdf(docDefinition: unknown): { download(filename: string): void };
-};
 
 /**
  * Stan aplikacji
@@ -173,11 +171,6 @@ export const Leaves: LeavesAPI = (() => {
         }
     };
 
-    const toUTCDate = (dateString: string): Date => {
-        const [year, month, day] = dateString.split('-').map(Number);
-        return new Date(Date.UTC(year, month - 1, day));
-    };
-
     const refreshCurrentView = async (): Promise<void> => {
         if (monthlyViewBtn?.classList.contains('active')) {
             await showMonthlyView();
@@ -318,13 +311,15 @@ export const Leaves: LeavesAPI = (() => {
         clearFiltersBtn?.removeEventListener('click', handleClearFilters);
         yearSelect?.removeEventListener('change', handleYearChange);
         currentYearBtn?.removeEventListener('click', handleCurrentYearClick);
-        printLeavesNavbarBtn?.removeEventListener('click', printLeavesTableToPdf);
+        printLeavesNavbarBtn?.removeEventListener('click', handlePrintLeaves);
 
         if (window.destroyContextMenu) {
             window.destroyContextMenu('contextMenu');
         }
+
+        CalendarModal.destroy();
         activeCell = null;
-        console.log('Leaves module destroyed');
+        debugLog('Leaves module destroyed');
     };
 
     const openCalendarForCell = async (cell: HTMLTableCellElement | null): Promise<void> => {
@@ -351,7 +346,7 @@ export const Leaves: LeavesAPI = (() => {
             await saveLeavesData(employeeName, updatedLeaves);
             renderSingleEmployeeLeaves(employeeName, updatedLeaves);
         } catch (error) {
-            console.log('Operacja w kalendarzu została anulowana.', error);
+            debugLog('Operacja w kalendarzu została anulowana.', error);
             if (error !== 'Modal closed without confirmation') {
                 window.showToast('Anulowano zmiany.', 2000);
             }
@@ -368,7 +363,37 @@ export const Leaves: LeavesAPI = (() => {
         document.addEventListener('app:search', _handleAppSearch);
         clearFiltersBtn?.addEventListener('click', handleClearFilters);
         currentYearBtn?.addEventListener('click', handleCurrentYearClick);
-        printLeavesNavbarBtn?.addEventListener('click', printLeavesTableToPdf);
+        printLeavesNavbarBtn?.addEventListener('click', handlePrintLeaves);
+
+        // Mobile accordion functionality
+        setupMobileAccordion();
+    };
+
+    const setupMobileAccordion = (): void => {
+        // Only setup on mobile screens
+        if (window.innerWidth > 768) return;
+
+        const handleCardToggle = (event: Event): void => {
+            const target = event.target as HTMLElement;
+            const nameCell = target.closest('.employee-name-cell, .summary-table td:first-child');
+
+            if (nameCell) {
+                const row = nameCell.closest('tr');
+                if (row) {
+                    row.classList.toggle('expanded');
+                }
+                // Prevent event from bubbling to _handleTableClick
+                event.stopPropagation();
+            }
+        };
+
+        leavesTableBody?.addEventListener('click', handleCardToggle, true);
+
+        // Also setup for summary and care views
+        const summaryTableBody = document.getElementById('summaryTableBody');
+        const careTableBody = document.getElementById('careTableBody');
+        summaryTableBody?.addEventListener('click', handleCardToggle, true);
+        careTableBody?.addEventListener('click', handleCardToggle, true);
     };
 
     const handleClearFilters = async (): Promise<void> => {
@@ -478,60 +503,11 @@ export const Leaves: LeavesAPI = (() => {
         }
     };
 
-    const printLeavesTableToPdf = (): void => {
-        const table = document.getElementById('leavesTable');
-        if (!table) return;
-
-        const headers = Array.from(table.querySelectorAll('thead th')).map((th, index) => ({
-            text: th.textContent || '',
-            style: 'tableHeader',
-            width: index === 0 ? 100 : '*',
-        }));
-
-        const body = Array.from(table.querySelectorAll('tbody tr')).map((row) => {
-            const tr = row as HTMLTableRowElement;
-            return Array.from(tr.cells).map((cell, index) => {
-                if (index > 0) {
-                    const blocks = Array.from(cell.querySelectorAll('.leave-block'));
-                    if (blocks.length > 0) {
-                        return blocks.map((b) => b.textContent || '').join('\n');
-                    }
-                }
-                return (cell.textContent || '').trim();
-            });
-        });
-
-        const docDefinition = {
-            pageOrientation: 'landscape',
-            pageSize: 'A3',
-            pageMargins: [20, 20, 20, 20],
-            content: [
-                { text: `Grafik Urlopów - ${currentYear}`, style: 'header' },
-                {
-                    style: 'tableExample',
-                    table: {
-                        headerRows: 1,
-                        widths: headers.map((h) => h.width),
-                        body: [headers, ...body],
-                    },
-                    layout: {
-                        fillColor: function (rowIndex: number) {
-                            return rowIndex === 0 ? '#4CAF50' : null;
-                        },
-                        hLineWidth: function () { return 0.5; },
-                        vLineWidth: function () { return 0.5; },
-                    },
-                },
-            ],
-            styles: {
-                header: { fontSize: 18, bold: true, margin: [0, 0, 0, 10] },
-                tableExample: { margin: [0, 5, 0, 15] },
-                tableHeader: { bold: true, fontSize: 10, color: 'white', alignment: 'center' },
-            },
-            defaultStyle: { font: 'Roboto', fontSize: 8 },
-        };
-
-        pdfMake.createPdf(docDefinition).download(`grafik-urlopow-${currentYear}.pdf`);
+    /**
+     * Wrapper dla eksportu PDF - przekazuje aktualny rok
+     */
+    const handlePrintLeaves = (): void => {
+        printLeavesTableToPdf({ year: currentYear });
     };
 
     const generateTableHeaders = (): void => {
@@ -760,6 +736,8 @@ export const Leaves: LeavesAPI = (() => {
                     }
                     div.setAttribute('title', tooltipText);
                     div.style.backgroundColor = bgColor;
+                    div.setAttribute('data-color', bgColor);
+                    div.setAttribute('data-type', leave.type || 'vacation');
 
                     if (start < monthStart) div.classList.add('continues-left');
                     if (end > monthEnd) div.classList.add('continues-right');
